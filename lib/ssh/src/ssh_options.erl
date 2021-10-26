@@ -45,7 +45,7 @@
 
 -type option_in() :: proplists:property() | proplists:proplist() .
 
--type option_class() :: internal_options | socket_options | user_options . 
+-type option_class() :: internal_options | socket_options | user_options.
 
 -type option_declaration() :: #{class := user_option | undoc_user_option,
                                 chk := fun((any()) -> boolean() | {true,any()}),
@@ -56,7 +56,7 @@
 
 -type option_declarations() :: #{ option_key() := option_declaration() }.
 
--type error() :: {error,{eoptions,any()}} .
+-type error() :: {error,{eoptions,any()}}.
 
 -type private_options() :: #{socket_options   := socket_options(),
                              internal_options := internal_options(),
@@ -123,7 +123,7 @@ put_user_value(L, Opts) when is_list(L) ->
     lists:foldl(fun put_user_value/2, Opts, L);
 put_user_value({Key,Value}, Opts) ->
     Opts#{Key := Value}.
-    
+
 %%%----------------
 put_internal_value(L, IntOpts) when is_list(L) ->
     lists:foldl(fun put_internal_value/2, IntOpts, L);
@@ -200,7 +200,7 @@ handle_options(Role, OptsList0, Opts0) when is_map(Opts0),
                                                      lists:keydelete(K,1,maps:get(key_cb_options,M))]},
                                [{K,NewVal} | lists:keydelete(K,1,PL)]
                               };
-                              
+
                           undefined ->
                               %% Use the default value
                               {M#{K => Vd}, PL}
@@ -306,7 +306,7 @@ save({Key,Value}, Defs, OptMap) when is_map(OptMap) ->
         false ->
             error({eoptions, {Key,Value}, "Bad value"});
         forbidden ->
-            error({eoptions, {Key,Value}, 
+            error({eoptions, {Key,Value},
                    io_lib:format("The option '~s' is used internally. The "
                                  "user is not allowed to specify this option.",
                                  [Key])})
@@ -332,7 +332,7 @@ save(Opt, _Defs, OptMap) when is_map(OptMap) ->
 no_sensitive(rm, #{id_string := _,
                    tstflg := _}) -> '*** removed ***';
 no_sensitive(filter, Opts = #{id_string := _,
-                              tstflg := _}) -> 
+                              tstflg := _}) ->
     Sensitive = [password, user_passwords,
                  dsa_pass_phrase, rsa_pass_phrase, ecdsa_pass_phrase,
                  ed25519_pass_phrase, ed448_pass_phrase],
@@ -470,8 +470,8 @@ default(server) ->
             chk => fun(V) ->
                            is_list(V) andalso
                                lists:all(fun({S1,S2}) ->
-                                                 check_string(S1) andalso 
-                                                     check_string(S2)   
+                                                 check_string(S1) andalso
+                                                     check_string(S2)
                                          end, V)
                    end,
             class => user_option
@@ -641,7 +641,7 @@ default(client) ->
            },
 
       user =>
-          #{default => 
+          #{default =>
                 begin
                     Env = case os:type() of
                               {win32, _} -> "USERNAME";
@@ -713,15 +713,15 @@ default(common) ->
              class => user_option
             },
 
-       id_string => 
+       id_string =>
            #{default => try {ok, [_|_] = VSN} = application:get_key(ssh, vsn),
                             "Erlang/" ++ VSN
                         catch
                             _:_ -> ""
                         end,
-             chk => fun(random) -> 
+             chk => fun(random) ->
                             {true, {random,2,5}}; % 2 - 5 random characters
-                       ({random,I1,I2}) -> 
+                       ({random,I1,I2}) ->
                             %% Undocumented
                             check_pos_integer(I1) andalso
                                 check_pos_integer(I2) andalso
@@ -759,7 +759,7 @@ default(common) ->
              class => user_option
             },
 
-       unexpectedfun => 
+       unexpectedfun =>
            #{default => fun(_,_) -> report end,
              chk => fun(V) -> check_function2(V) end,
              class => user_option
@@ -843,7 +843,7 @@ default(common) ->
                     end,
              class => undoc_user_option
             },
-    
+
        tstflg =>
            #{default => [],
              chk => fun(V) -> erlang:is_list(V) end,
@@ -893,15 +893,15 @@ check_function1(F) -> is_function(F,1).
 check_function2(F) -> is_function(F,2).
 check_function3(F) -> is_function(F,3).
 check_function4(F) -> is_function(F,4).
-     
+
 %%%----------------------------------------------------------------
-check_pref_public_key_algs(V) -> 
+check_pref_public_key_algs(V) ->
     %% Get the dynamically supported keys, that is, thoose
     %% that are stored
     PKs = ssh_transport:supported_algorithms(public_key),
     CHK = fun(A, Ack) ->
                   case lists:member(A, PKs) of
-                      true -> 
+                      true ->
                           case lists:member(A,Ack) of
                               false -> [A|Ack];
                               true -> Ack       % Remove duplicates
@@ -923,7 +923,7 @@ check_pref_public_key_algs(V) ->
 
 %%%----------------------------------------------------------------
 %% Check that it is a directory and is readable
-check_dir(Dir) -> 
+check_dir(Dir) ->
     case file:read_file_info(Dir) of
 	{ok, #file_info{type = directory,
 			access = Access}} ->
@@ -942,7 +942,7 @@ check_dir(Dir) ->
 
 %%%----------------------------------------------------------------
 check_string(S) -> is_list(S).                  % FIXME: stub
-                
+
 %%%----------------------------------------------------------------
 check_dh_gex_groups({file,File}) when is_list(File) ->
     case file:consult(File) of
@@ -1103,19 +1103,19 @@ normalize_mod_alg_list(K, Vs, UseDefaultAlgs) ->
 normalize_mod_alg_list(_K, _, [], Default) ->
     Default;
 
-normalize_mod_alg_list(K, true, [{client2server,L1}], [_,{server2client,L2}]) -> 
+normalize_mod_alg_list(K, true, [{client2server,L1}], [_,{server2client,L2}]) ->
     [nml1(K,{client2server,L1}),
      {server2client,L2}];
 
-normalize_mod_alg_list(K, true, [{server2client,L2}], [{client2server,L1},_]) -> 
+normalize_mod_alg_list(K, true, [{server2client,L2}], [{client2server,L1},_]) ->
     [{client2server,L1},
      nml1(K,{server2client,L2})];
 
-normalize_mod_alg_list(K, true, [{server2client,L2},{client2server,L1}], _) -> 
+normalize_mod_alg_list(K, true, [{server2client,L2},{client2server,L1}], _) ->
     [nml1(K,{client2server,L1}),
      nml1(K,{server2client,L2})];
 
-normalize_mod_alg_list(K, true, [{client2server,L1},{server2client,L2}], _) -> 
+normalize_mod_alg_list(K, true, [{client2server,L1},{server2client,L2}], _) ->
     [nml1(K,{client2server,L1}),
      nml1(K,{server2client,L2})];
 
@@ -1131,9 +1131,9 @@ normalize_mod_alg_list(K, false, L, _) ->
 nml1(K, {T,V}) when T==client2server ; T==server2client ->
     {T, nml({K,T}, V)}.
 
-nml(K, L) -> 
+nml(K, L) ->
     [error_in_check(K, "Bad value for this key") % This is a throw
-     || V <- L,  
+     || V <- L,
         not is_atom(V)
     ],
     case L -- lists:usort(L) of
@@ -1151,7 +1151,6 @@ def_alg(K, false) ->
 def_alg(K, true) ->
     ssh_transport:default_algorithms(K).
 
-              
 
 check_preferred_algorithms(Algs) when is_list(Algs) ->
     check_input_ok(Algs),
@@ -1187,14 +1186,14 @@ final_preferred_algorithms(Options0) ->
         _ ->
             Options1
     end.
-    
+
 eval_ops(PrefAlgs, ModAlgs) ->
     lists:foldl(fun eval_op/2, PrefAlgs, ModAlgs).
 
 eval_op({Op,AlgKVs}, PrefAlgs) ->
     eval_op(Op, AlgKVs, PrefAlgs, []).
 
-eval_op(Op, [{C,L1}|T1], [{C,L2}|T2], Acc) -> 
+eval_op(Op, [{C,L1}|T1], [{C,L2}|T2], Acc) ->
     eval_op(Op, T1, T2, [{C,eval_op(Op,L1,L2,[])} | Acc]);
 
 eval_op(_,        [],   [], Acc) -> lists:reverse(Acc);
@@ -1211,7 +1210,7 @@ rmns(K, Vs, UnsupIsErrorFlg) ->
         false ->
             rm_unsup(Vs, ssh_transport:supported_algorithms(K), UnsupIsErrorFlg, K);
         true ->
-            [{C, rm_unsup(Vsx, Sup, UnsupIsErrorFlg, {K,C})} 
+            [{C, rm_unsup(Vsx, Sup, UnsupIsErrorFlg, {K,C})}
              || {{C,Vsx},{C,Sup}} <- lists:zip(Vs,ssh_transport:supported_algorithms(K))
             ]
     end.
@@ -1225,7 +1224,7 @@ rm_unsup(A, B, Flg, ErrInf) ->
         Unsup -> A -- Unsup
     end.
 
-            
+
 error_if_empty([{K,[]}|_]) ->
     error({eoptions, K, "Empty resulting algorithm list"});
 error_if_empty([{K,[{client2server,[]}, {server2client,[]}]}]) ->
