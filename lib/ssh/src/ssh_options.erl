@@ -224,7 +224,7 @@ handle_options(Role, OptsList0, Opts0) when is_map(Opts0),
                               save(KV, OptionDefinitions, Vals)
                       end, InitialMap, OptsList2))
     catch
-        error:{EO, KV, Reason} when EO == eoptions ; EO == eerl_env ->
+        error:{EO, KV, Reason} when EO == eoptions ->
             if
                 Reason == undefined ->
                     {error, {EO,KV}};
