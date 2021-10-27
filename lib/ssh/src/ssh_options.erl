@@ -684,14 +684,15 @@ default(client) ->
 default(common) ->
     #{
        user_dir =>
-           #{default => false, % FIXME: TBD ~/.ssh at time of call when user is known
+           #{default => false, % FIXME: TBD ~/.ssh at time of call
+                               % when user is known
              chk => fun(V) -> check_string(V) andalso check_dir(V) end,
              class => user_option
             },
 
        %% NOTE: This option's default value must be undefined.
-       %% In the final stage that "merges" the modify_algorithms and preferred_algorithms,
-       %% this option's default values is set.
+       %% In the final stage that "merges" the modify_algorithms and
+       %% preferred_algorithms, this option's default values is set.
       pref_public_key_algs =>
           #{default => undefined,
             chk => fun(V) -> check_pref_public_key_algs(V) end,
@@ -704,11 +705,14 @@ default(common) ->
              class => user_option
             },
 
-       %% NOTE: This option is supposed to be used only in this very module (?MODULE). There is
-       %% a final stage in handle_options that "merges" the preferred_algorithms option and this one.
-       %% The preferred_algorithms is the one to use in the rest of the ssh application!
+       %% NOTE: This option is supposed to be used only in this very
+       %% module (?MODULE). There is a final stage in handle_options
+       %% that "merges" the preferred_algorithms option and this
+       %% one. The preferred_algorithms is the one to use in the rest
+       %% of the ssh application!
        modify_algorithms =>
-           #{default => undefined, % signals error if unsupported algo in preferred_algorithms :(
+           #{default => undefined, % signals error if unsupported algo
+                                   % in preferred_algorithms :(
              chk => fun(V) -> check_modify_algorithms(V) end,
              class => user_option
             },
