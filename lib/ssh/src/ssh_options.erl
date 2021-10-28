@@ -22,6 +22,8 @@
 
 -module(ssh_options).
 
+-behaviour(ssh_error).
+
 -include("ssh.hrl").
 -include_lib("kernel/include/file.hrl").
 
@@ -34,10 +36,12 @@
          keep_set_options/2,
          no_sensitive/2,
          initial_default_algorithms/2,
-         check_preferred_algorithms/1
+         check_preferred_algorithms/1,
+         error_description/1
         ]).
 
--export_type([private_options/0
+-export_type([private_options/0,
+              error/0
              ]).
 
 %%%================================================================
@@ -56,12 +60,14 @@
 
 -type option_declarations() :: #{ option_key() := option_declaration() }.
 
--type error() :: {error,{eoptions,any()}}.
+-type error() :: ssh:error({eoptions, term()}).
 
 -type private_options() :: #{socket_options   := socket_options(),
                              internal_options := internal_options(),
                              option_key()     => any()
                             }.
+
+-define(error(Details), ?ssh_error({eoptions, Details})).
 
 %%%================================================================
 %%%
@@ -149,14 +155,15 @@ put_socket_value(A, SockOpts) when is_atom(A) ->
 delete_key(internal_options, Key, Opts, _CallerMod, _CallerLine) when is_map(Opts) ->
     InternalOpts = maps:get(internal_options,Opts),
     Opts#{internal_options := maps:remove(Key, InternalOpts)}.
-        
+
 
 %%%================================================================
 %%%
 %%% Initialize the options
 %%%
 
--spec handle_options(role(), client_options()|daemon_options()) -> private_options() | error() .
+-spec handle_options(role(), client_options() | daemon_options())
+                    -> private_options() | {error, error()}.
 
 handle_options(Role, PropList0) ->
     handle_options(Role, PropList0, #{socket_options   => [],
@@ -224,14 +231,16 @@ handle_options(Role, OptsList0, Opts0) when is_map(Opts0),
                               save(KV, OptionDefinitions, Vals)
                       end, InitialMap, OptsList2))
     catch
-        error:{EO, KV, Reason} when EO == eoptions ->
+        error:{eoptions, KV, Reason} ->
             if
+                %% FIXME Is this clause really needed?
                 Reason == undefined ->
-                    {error, {EO,KV}};
+                    {error, ?error(KV)};
+                %% FIXME this clause should not be needed.
                 is_list(Reason) ->
-                    {error, {EO,{KV,lists:flatten(Reason)}}};
+                    {error, ?error({KV, lists:flatten(Reason)})};
                 true ->
-                    {error, {EO,{KV,Reason}}}
+                    {error, ?error({KV, Reason})}
             end
     end.
 
@@ -304,12 +313,9 @@ save({Key,Value}, Defs, OptMap) when is_map(OptMap) ->
         {true, ModifiedValue} ->
             OptMap#{Key := ModifiedValue};
         false ->
-            error({eoptions, {Key,Value}, "Bad value"});
+            error({eoptions, {Key,Value}, bad_value});
         forbidden ->
-            error({eoptions, {Key,Value},
-                   io_lib:format("The option '~s' is used internally. The "
-                                 "user is not allowed to specify this option.",
-                                 [Key])})
+            error({eoptions, {Key,Value}, forbidden})
     catch
         %% An unknown Key (= not in the definition map) is
         %% regarded as an inet option:
@@ -910,7 +916,7 @@ check_pref_public_key_algs(V) ->
                               false -> [A|Ack];
                               true -> Ack       % Remove duplicates
                           end;
-                      false -> error_in_check(A, "Not supported public key")
+                      false -> error_in_check(A, unsupported_public_key)
                   end
           end,
     case lists:foldr(
@@ -941,7 +947,7 @@ check_dir(Dir) ->
             error_in_check(Dir, enotdir);
 
 	{error, Error} ->
-            error_in_check(Dir, Error)
+            error_in_check(Dir, {read_file_info, Error})
     end.
 
 %%%----------------------------------------------------------------
@@ -965,16 +971,16 @@ check_dh_gex_groups({ssh_moduli_file,File})  when is_list(File) ->
                 {ok,Moduli} ->
                     check_dh_gex_groups(Moduli);
                 {error,Error} ->
-                    error_in_check({ssh_moduli_file,File}, Error)
+                    error_in_check({ssh_moduli_file,File}, {read, Error})
             catch
                 _:_ ->
-                    error_in_check({ssh_moduli_file,File}, "Bad format in file "++File)
+                    error_in_check({ssh_moduli_file,File}, bad_format)
             after
                 file:close(D)
             end;
 
         {error, Error} ->
-            error_in_check({ssh_moduli_file,File}, Error)
+            error_in_check({ssh_moduli_file,File}, {open, Error})
     end;
 
 check_dh_gex_groups(L0) when is_list(L0), is_tuple(hd(L0)) ->
@@ -1045,7 +1051,7 @@ valid_hash(S) -> valid_hash(S, proplists:get_value(hashs,crypto:supports())).
 
 valid_hash(S, Ss) when is_atom(S) -> lists:member(S, ?SHAs) andalso lists:member(S, Ss);
 valid_hash(L, Ss) when is_list(L) -> lists:all(fun(S) -> valid_hash(S,Ss) end, L);
-valid_hash(X,  _) -> error_in_check(X, "Expect atom or list in fingerprint spec").
+valid_hash(X,  _) -> error_in_check(X, invalid_fingerprint).
 
 %%%----------------------------------------------------------------
 initial_default_algorithms(DefList, ModList) ->
@@ -1054,14 +1060,14 @@ initial_default_algorithms(DefList, ModList) ->
 
 %%%----------------------------------------------------------------
 check_modify_algorithms(M) when is_list(M) ->
-    [error_in_check(Op_KVs, "Bad modify_algorithms")
+    [error_in_check(Op_KVs, bad_modify_algorithms)
      || Op_KVs <- M,
         not is_tuple(Op_KVs)
             orelse (size(Op_KVs) =/= 2)
             orelse (not lists:member(element(1,Op_KVs), [append,prepend,rm]))],
     {true, [{Op,normalize_mod_algs(KVs,false)} || {Op,KVs} <- M]};
-check_modify_algorithms(_) ->
-    error_in_check(modify_algorithms, "Bad option value. List expected.").
+check_modify_algorithms(Bad) ->
+    error_in_check(Bad, modify_algorithms_bad_option).
 
 
 
@@ -1088,11 +1094,11 @@ normalize_mod_algs([], [{K,_}|_], _, _) ->
     %% Some values left in the key-value list after removing the expected entries
     %% (that's bad)
     case ssh_transport:algo_class(K) of
-        true -> error_in_check(K, "Duplicate key");
-        false -> error_in_check(K, "Unknown key")
+        true -> error_in_check(K, duplicate_key);
+        false -> error_in_check(K, unknown_key)
     end;
 normalize_mod_algs([], [X|_], _, _) ->
-    error_in_check(X, "Bad list element").
+    error_in_check(X, bad_list_element).
 
 
 
@@ -1136,13 +1142,13 @@ nml1(K, {T,V}) when T==client2server ; T==server2client ->
     {T, nml({K,T}, V)}.
 
 nml(K, L) ->
-    [error_in_check(K, "Bad value for this key") % This is a throw
+    [error_in_check({K, V}, bad_value) % This is a throw
      || V <- L,
         not is_atom(V)
     ],
     case L -- lists:usort(L) of
         [] -> ok;
-        Dups -> error_in_check({K,Dups}, "Duplicates") % This is a throw
+        Dups -> error_in_check({K,Dups}, duplicates) % This is a throw
     end,
     L.
 
@@ -1160,12 +1166,12 @@ check_preferred_algorithms(Algs) when is_list(Algs) ->
     check_input_ok(Algs),
     {true, normalize_mod_algs(Algs, true)};
 
-check_preferred_algorithms(_) ->
-    error_in_check(modify_algorithms, "Bad option value. List expected.").
+check_preferred_algorithms(Bad) ->
+    error_in_check(Bad, modify_algorithms_bad_option).
 
 
 check_input_ok(Algs) ->
-    [error_in_check(KVs, "Bad preferred_algorithms")
+    [error_in_check(KVs, bad_preferred_algorithms)
      || KVs <- Algs,
         not is_tuple(KVs)
             orelse (size(KVs) =/= 2)].
@@ -1221,25 +1227,74 @@ rmns(K, Vs, UnsupIsErrorFlg) ->
 
 rm_unsup(A, B, Flg, ErrInf) ->
     case A--B of
-        Unsup=[_|_] when Flg==true -> error({eoptions,
-                                             {preferred_algorithms,{ErrInf,Unsup}},
-                                             "Unsupported value(s) found"
-                                            });
+        Unsup=[_|_] when Flg==true ->
+            error({eoptions,
+                   {preferred_algorithms,{ErrInf,Unsup}},
+                   unsupported_values
+                  });
         Unsup -> A -- Unsup
     end.
 
 
 error_if_empty([{K,[]}|_]) ->
-    error({eoptions, K, "Empty resulting algorithm list"});
+    {error, ?error({K, empty_algoritms})};
 error_if_empty([{K,[{client2server,[]}, {server2client,[]}]}]) ->
-    error({eoptions, K, "Empty resulting algorithm list"});
+    {error, ?error({K, empty_algoritms})};
 error_if_empty([{K,[{client2server,[]}|_]} | _]) ->
-    error({eoptions, {K,client2server}, "Empty resulting algorithm list"});
+    {error, ?error({{K,client2server}, empty_algoritms})};
 error_if_empty([{K,[_,{server2client,[]}|_]} | _]) ->
-    error({eoptions, {K,server2client}, "Empty resulting algorithm list"});
+    {error, ?error({{K,server2client}, empty_algoritms})};
 error_if_empty([_|T]) ->
     error_if_empty(T);
 error_if_empty([]) ->
     ok.
 
 %%%----------------------------------------------------------------
+%%% Get error descriptions
+
+error_description(?error(Details)) ->
+    description(Details).
+
+description({_Key, empty_algoritms}) ->
+    "Empty resulting algorithm list";
+description({{_Key, _Value}, bad_value}) ->
+    "Bad value";
+description({{Key, _Value}, forbidden}) ->
+    ?FMT("The option '~s' is used internally. The "
+         "user is not allowed to specify this option.",
+         [Key]);
+description({Key, duplicate_key}) ->
+    ?FMT("Duplicate key: ~p", [Key]);
+description({Key, unknown_key}) ->
+    ?FMT("Unknown key: ~p", [Key]);
+description({_Key, unsupported_public_key}) ->
+    ?FMT("Not supported public key", []);
+description({Dir, eacces}) ->
+    ?FMT("Directory '~p' is not readable.", [Dir]);
+description({Dir, enotdir}) ->
+    ?FMT("'~p' is not a directory.", [Dir]);
+description({Dir, {read_file_info, Error}}) ->
+    ?FMT("When reading info for directory '~p', error: ~p",
+         [Dir, Error]);
+description({{file, File}, Error}) ->
+    ?FMT("When consulting file '~p', error: ~p", [File, Error]);
+description({{ssh_moduli_file, File}, {read, Error}}) ->
+    ?FMT("When reading file '~p', error: ~p", [File, Error]);
+description({{ssh_moduli_file, File}, bad_format}) ->
+    ?FMT("Bad format found when reading file '~p'.", [File]);
+description({{ssh_moduli_file, File}, {open, Error}}) ->
+    ?FMT("When opening file '~p', error: ~p", [File, Error]);
+description({X, invalid_fingerprint}) ->
+    ?FMT("Expect atom or list in fingerprint spec, found '~p'", [X]);
+description({Op_KVs, bad_modify_algorithms}) ->
+    ?FMT("Bad modify_algorithms: '~p'", [Op_KVs]);
+description({Bad, modify_algorithms_bad_option}) ->
+    ?FMT("Bad option value. List expected, found: '~p'.", [Bad]);
+description({X, bad_list_element}) ->
+    ?FMT("Bad list element: '~p'", [X]);
+description({{K, V}, bad_value}) ->
+    ?FMT("Bad value '~p' for key '~p'", [V, K]);
+description({{K, Dups}, duplicates}) ->
+    ?FMT("Duplicates '~p' found for key '~p'", [Dups, K]);
+description({KVs, bad_preferred_algorithms}) ->
+    ?FMT("Bad preferred_algorithms: '~p'", [KVs]).
