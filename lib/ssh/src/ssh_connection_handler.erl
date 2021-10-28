@@ -139,8 +139,7 @@ takeover(ConnPid, _, Socket, Options) ->
     end.
 
 %%--------------------------------------------------------------------
--spec stop(connection_ref()
-	  ) -> ok | {error, term()}.
+-spec stop(connection_ref()) -> ok.
 %% . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 stop(ConnectionHandler)->
     case call(ConnectionHandler, stop) of
@@ -1741,7 +1740,8 @@ send_disconnect(Code, Reason, DetailedText, Module, Line, StateName, D0) ->
     Msg = #ssh_msg_disconnect{code = Code,
                               description = Reason},
     D = send_msg(Msg, D0),
-    LogMsg = io_lib:format("Disconnects with code = ~p [RFC4253 11.1]: ~s",[Code,Reason]),
+    LogMsg = io_lib:format("Disconnects with code = ~p [RFC4253 11.1]: ~s",
+                           [Code, Reason]),
     call_disconnectfun_and_log_cond(LogMsg, DetailedText, Module, Line, StateName, D),
     {{shutdown,Reason}, D}.
 
