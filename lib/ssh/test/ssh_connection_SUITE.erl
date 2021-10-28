@@ -421,21 +421,22 @@ connect_timeout(_Config) ->
 
 %%--------------------------------------------------------------------
 daemon_sock_not_tcp(_Config) ->
-    {ok,Sock} = gen_udp:open(0, []), 
+    {ok,Sock} = gen_udp:open(0, []),
     {error, not_tcp_socket} = ssh:daemon(Sock),
     gen_udp:close(Sock).
 
 %%--------------------------------------------------------------------
 connect_sock_not_passive(_Config) ->
-    {ok,Sock} = ssh_test_lib:gen_tcp_connect(?SSH_DEFAULT_PORT, []), 
-    {error, not_passive_mode} = ssh:connect(Sock, [{save_accepted_host, false},
-                                                   {silently_accept_hosts, true},
-                                                   {user_interaction, true}]),
+    {ok,Sock} = ssh_test_lib:gen_tcp_connect(?SSH_DEFAULT_PORT, []),
+    {error, not_passive_mode} =
+        ssh:connect(Sock, [{save_accepted_host, false},
+                           {silently_accept_hosts, true},
+                           {user_interaction, true}]),
     gen_tcp:close(Sock).
 
 %%--------------------------------------------------------------------
 daemon_sock_not_passive(_Config) ->
-    {ok,Sock} = ssh_test_lib:gen_tcp_connect(?SSH_DEFAULT_PORT, []), 
+    {ok,Sock} = ssh_test_lib:gen_tcp_connect(?SSH_DEFAULT_PORT, []),
     {error, not_passive_mode} = ssh:daemon(Sock),
     gen_tcp:close(Sock).
 
