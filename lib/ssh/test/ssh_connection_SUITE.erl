@@ -404,7 +404,7 @@ daemon_start(Config) ->
 
 %%--------------------------------------------------------------------
 connect_sock_not_tcp(_Config) ->
-    {ok,Sock} = gen_udp:open(0, []), 
+    {ok,Sock} = gen_udp:open(0, []),
     {error, not_tcp_socket} = ssh:connect(Sock, [{save_accepted_host, false},
                                                  {silently_accept_hosts, true},
                                                  {user_interaction, true}]),
