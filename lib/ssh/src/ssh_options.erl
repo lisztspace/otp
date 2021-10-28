@@ -358,7 +358,7 @@ no_sensitive(_, X) ->
 
 %%%================================================================
 %%%
--spec keep_user_options(client|server, #{}) -> #{}.
+-spec keep_user_options(role(), #{}) -> #{}.
 
 keep_user_options(Type, Opts) ->
     Defs = default(Type),
