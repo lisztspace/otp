@@ -5,7 +5,7 @@
   <header>
     <copyright>
       <year>2009</year>
-      <year>2020</year>
+      <year>2021</year>
       <holder>Ericsson AB, All Rights Reserved</holder>
     </copyright>
     <legalnotice>
@@ -35,8 +35,10 @@
   <description>
     <note>
       <p>This module replaces ssh_channel.</p>
-      <p>The old module is still available for compatibility, but should not be used for new programs.
-      The old module will not be maintained except for some error corrections
+      <p>The old module is still available for compatibility, but
+      should not be used for new programs.
+      The old module will not be maintained except for some error
+      corrections.
       </p>
     </note>
     <p>SSH services (clients and servers) are implemented as channels
