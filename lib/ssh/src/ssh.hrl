@@ -421,7 +421,7 @@
 
 -record(ssh,
 	{
-	  role :: client | role(),
+	  role :: role(),
 	  peer :: undefined | 
                   {inet:hostname(),ip_port()},         %% string version of peer address 
 
