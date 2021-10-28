@@ -143,11 +143,13 @@ start_tracer(WriteFun, InitAcc) when is_function(WriteFun, 3) ->
 %%%----------------------------------------------------------------
 on() -> on(?ALL_DBG_TYPES).
 on(Type) -> switch(on, Type).
+
 is_on() -> gen_server:call(?SERVER, get_on, ?CALL_TIMEOUT).
     
 
 off() -> off(?ALL_DBG_TYPES). % A bit overkill...
 off(Type) -> switch(off, Type).
+
 is_off() -> ?ALL_DBG_TYPES -- is_on().
     
     
