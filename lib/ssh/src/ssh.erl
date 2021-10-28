@@ -28,6 +28,8 @@
 -include_lib("kernel/include/file.hrl").
 -include_lib("kernel/include/inet.hrl").
 
+-behaviour(ssh_error).
+
 -export([start/0, start/1, stop/0,
 	 connect/2, connect/3, connect/4,
 	 close/1, connection_info/2,
@@ -42,7 +44,8 @@
 	 stop_daemon/1, stop_daemon/2, stop_daemon/3,
 	 shell/1, shell/2, shell/3,
          tcpip_tunnel_from_server/5, tcpip_tunnel_from_server/6,
-         tcpip_tunnel_to_server/5, tcpip_tunnel_to_server/6
+         tcpip_tunnel_to_server/5, tcpip_tunnel_to_server/6,
+         error_description/1
 	]).
 
 %% In move from public_key
@@ -142,9 +145,14 @@ stop() ->
          orelse (is_integer(Timeout)
                  andalso Timeout >= 0))).
 
+-type connect_error() ::
+        invalid_options
+      | invalid_timeout
+      | invalid_port.
+
 -spec connect(OpenTcpSocket, Options)
              -> {ok, connection_ref()}
-              | {error, term()} when
+              | {error, error(connect_error()) | ssh_options:error()} when
       OpenTcpSocket :: open_socket(),
       Options :: client_options().
 
@@ -153,10 +161,12 @@ connect(OpenTcpSocket, Options) when ?IS_VALID_OPTIONS(Options) ->
 connect(_OpenTcpSocket, Options) ->
     bad_arg([{options, Options}]).
 
--spec connect(open_socket(), client_options(), timeout()) ->
-                     {ok, connection_ref()} | {error, term()}
-           ; (host(), inet:port_number(), client_options()) ->
-                     {ok, connection_ref()} | {error, term()}.
+-spec connect(open_socket(), client_options(), timeout())
+             -> {ok, connection_ref()}
+              | {error, error(connect_error()) | ssh_options:error()}
+           ; (host(), inet:port_number(), client_options())
+             -> {ok, connection_ref()}
+              | {error, error(connect_error()) | ssh_options:error()}.
 
 connect(Host, Port, Options) when ?IS_VALID_PORT(Port),
                                   ?IS_VALID_OPTIONS(Options) ->
@@ -182,7 +192,7 @@ connect(_HostOrSocket, PortOrOptions, OptionsOrTimeout) ->
 
 -spec connect(Host, Port, Options, NegotiationTimeout)
              -> {ok, connection_ref()}
-              | {error, term()} when
+              | {error, error(connect_error()) | ssh_options:error()} when
       Host :: host(),
       Port :: inet:port_number(),
       Options :: client_options(),
@@ -235,10 +245,10 @@ bad_arg(Arg2, Arg3) ->
 
 %% Return list of errors
 -spec bad_args([{'options' | 'port' | 'timeout', any()}]) ->
-          [{'error', term()}].
+          [{'error', error(connect_error())}].
 bad_args(Args) ->
     IsErr = fun(true, _) -> false;
-               (false, Error) -> {true, {error, Error}}
+               (false, Error) -> {true, {error, ?ssh_error(Error)}}
             end,
     Check =
         fun({options, Arg}) -> IsErr(?IS_VALID_OPTIONS(Arg), invalid_options);
@@ -1034,3 +1044,9 @@ ssh_dbg_format(tcp, {return_from, {?MODULE,transport_connect,4}, Result},
                     "Result: ~p~n", [Host,Port,SockOpts,Result])
      ],
      Stack}.
+
+error_description(?ssh_error(Details)) ->
+    description(Details).
+
+description(Details) ->
+    ?FMT("~p", [Details]).
