@@ -823,8 +823,8 @@ ext_info_c(Config) ->
 %%%
 preferred_algorithms(Config) ->
     Ciphers = filter_supported(cipher, ?CIPHERS),
-    {error,{eoptions,{{preferred_algorithms,{kex,[some_unknown_algo]}},
-                      "Unsupported value(s) found"}}} =
+    {error,{{eoptions,{{preferred_algorithms,{kex,[some_unknown_algo]}},
+                       unsupported_values}}, _}} =
         chk_pref_algs(Config,
                       [?DEFAULT_KEX],
                       Ciphers,

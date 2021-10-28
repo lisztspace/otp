@@ -581,7 +581,7 @@ system_dir_option(Config) ->
     FileRead = proplists:get_value(readable_file,Config),
 
     case ssh_test_lib:daemon([{system_dir, DirUnread}]) of
-	{error,{eoptions,{{system_dir,DirUnread},eacces}}} ->
+	{error,{{eoptions,{{system_dir,DirUnread},eacces}}, _}} ->
 	    ok;
 	{Pid1,_Host1,Port1} when is_pid(Pid1),is_integer(Port1) ->
 	    ssh:stop_daemon(Pid1),
@@ -589,7 +589,7 @@ system_dir_option(Config) ->
 	end,
     
     case ssh_test_lib:daemon([{system_dir, FileRead}]) of
-	{error,{eoptions,{{system_dir,FileRead},enotdir}}} ->
+	{error,{{eoptions,{{system_dir,FileRead},enotdir}}, _}} ->
 	    ok;
 	{Pid2,_Host2,Port2} when is_pid(Pid2),is_integer(Port2) ->
 	    ssh:stop_daemon(Pid2),
@@ -605,16 +605,18 @@ user_dir_option(Config) ->
 
     case ssh:connect("localhost", Port, [{user_dir, DirUnread},
                                          {save_accepted_host, false}]) of
-	{error,{eoptions,{{user_dir,DirUnread},eacces}}} ->
+	{error,{{eoptions,{{user_dir,DirUnread},eacces}}, _}} ->
 	    ok;
+        %% FIXME Should the second element be a tuple?
 	{error,econnrefused} ->
 	    ct:fail("Didn't detect that dir is unreadable", [])
     end,
 
     case ssh:connect("localhost", Port, [{user_dir, FileRead},
                                          {save_accepted_host, false}]) of
-	{error,{eoptions,{{user_dir,FileRead},enotdir}}} ->
+	{error,{{eoptions,{{user_dir,FileRead},enotdir}}, _}} ->
 	    ok;
+        %% FIXME Should the second element be a tuple?
 	{error,econnrefused} ->
 	    ct:fail("Didn't detect that option is a plain file", [])
     end.
@@ -1244,7 +1246,7 @@ id_string_own_string_server_trail_space(Config) ->
 %%--------------------------------------------------------------------
 id_string_random_server(Config) ->
     %% Check undocumented format of id_string. First a bad variant:
-    {error,{eoptions,_}} = ssh:daemon(0, [{id_string,{random,8,6}}]),
+    {error,{{eoptions,_}, _}} = ssh:daemon(0, [{id_string,{random,8,6}}]),
     %% And then a correct one:
     {_Server, Host, Port} = ssh_test_lib:std_daemon(Config, [{id_string,{random,6,8}}]),
     {ok,S1}=ssh_test_lib:gen_tcp_connect(Host,Port,[{active,false},{packet,line}]),

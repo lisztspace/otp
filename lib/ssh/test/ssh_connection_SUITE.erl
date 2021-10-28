@@ -271,31 +271,31 @@ simple_exec_two_socks(_Config) ->
 
 %%--------------------------------------------------------------------
 connect2_invalid_options(_Config) ->
-    {error, invalid_options} = ssh:connect(bogus_socket, {bad, option}).
+    {error, {invalid_options, _}} = ssh:connect(bogus_socket, {bad, option}).
 
 connect3_invalid_port(_Config) ->
-    {error, invalid_port} = ssh:connect(bogus_host, noport, [{key, value}]).
+    {error, {invalid_port, _}} = ssh:connect(bogus_host, noport, [{key, value}]).
 
 connect3_invalid_options(_Config) ->
-    {error, invalid_options} = ssh:connect(bogus_host, 1337, bad_options).
+    {error, {invalid_options, _}} = ssh:connect(bogus_host, 1337, bad_options).
 
 connect3_invalid_timeout_0(_Config) ->
-    {error, invalid_timeout} =
+    {error, {invalid_timeout, _}} =
         ssh:connect(bogus_socket, [{key, value}], short).
 
 connect3_invalid_timeout_1(_Config) ->
-    {error, invalid_timeout} =
+    {error, {invalid_timeout, _}} =
         ssh:connect(bogus_socket, [{key, value}], -1).
 
 connect3_invalid_both(_Config) ->
     %% The actual reason is implementation dependent.
-    {error, _Reason} =
+    {error, {_Reason, _}} =
         ssh:connect(bogus, no_list_or_port, no_list_or_timeout).
 
 connect_invalid_port(Config) ->
     {Pid, Host, _Port, UserDir} = daemon_start(Config),
 
-    {error, invalid_port} =
+    {error, {invalid_port, _}} =
         ssh:connect(Host, undefined,
                     [{silently_accept_hosts, true},
                      {user, "foo"},
@@ -309,7 +309,7 @@ connect_invalid_port(Config) ->
 connect_invalid_timeout_0(Config) ->
     {Pid, Host, Port, UserDir} = daemon_start(Config),
 
-    {error, invalid_timeout} =
+    {error, {invalid_timeout, _}} =
         ssh:connect(Host, Port,
                     [{silently_accept_hosts, true},
                      {user, "foo"},
@@ -323,7 +323,7 @@ connect_invalid_timeout_0(Config) ->
 connect_invalid_timeout_1(Config) ->
     {Pid, Host, Port, UserDir} = daemon_start(Config),
 
-    {error, invalid_timeout} =
+    {error, {invalid_timeout, _}} =
         ssh:connect(Host, Port,
                     [{silently_accept_hosts, true},
                      {user, "foo"},
@@ -337,7 +337,7 @@ connect_invalid_timeout_1(Config) ->
 connect_invalid_options(Config) ->
     {Pid, Host, Port, _UserDir} = daemon_start(Config),
 
-    {error, invalid_options} =
+    {error, {invalid_options, _}} =
         ssh:connect(Host, Port,
                     {user, "foo"},
                     infinity),
