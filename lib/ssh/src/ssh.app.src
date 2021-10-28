@@ -24,6 +24,7 @@
              ssh_fsm_userauth_server,
 	     ssh_daemon_channel,
 	     ssh_dbg,
+             ssh_error,
              ssh_lib,
 	     ssh_shell,
 	     ssh_io,

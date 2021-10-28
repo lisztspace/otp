@@ -83,13 +83,22 @@
               compression_alg/0,
               host/0,
               open_socket/0,
-              ip_port/0
+              ip_port/0,
+              error/0,
+              error/1,
+              error_meta/0
 	     ]).
 
 
 -opaque daemon_ref()         :: pid() .
 -opaque channel_id()     :: non_neg_integer().
 -type connection_ref()       :: pid().  % should be -opaque, but that gives problems
+-type error_meta() :: #error_meta{}.    % FIXME This should be opaque,
+                                        % but it seems dialyzer gets
+                                        % lost when it is used.
+-type error(T) :: {T, error_meta()}.
+-type error() :: error(term()).                 % FIXME This should be
+                                                % made more precise
 
 %%--------------------------------------------------------------------
 %% Description: Starts the ssh application. Default type

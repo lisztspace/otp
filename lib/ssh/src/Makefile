@@ -52,7 +52,8 @@ BEHAVIOUR_MODULES_2= \
 	ssh_server_key_api \
 	ssh_sftpd_file_api \
         ssh_channel        \
-        ssh_client_channel
+        ssh_client_channel \
+	ssh_error
 
 MODULES= \
 	ssh \

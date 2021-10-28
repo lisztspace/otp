@@ -555,4 +555,15 @@
         ((fun(V) -> ?CIRC_BUF_IN(V), V end)(VALUE))
        ).
 
+%% Error handling
+-record(error_meta, {module = ?MODULE :: module()}).
+
+-define(META(Module), #error_meta{module = Module}).
+
+-define(ssh_error(Details, Module),
+        {Details, #error_meta{module = Module}}).
+-define(ssh_error(Details), ?ssh_error(Details, ?MODULE)).
+
+-define(FMT(FStr, Args), lists:flatten(io_lib:format(FStr, Args))).
+
 -endif. % SSH_HRL defined
