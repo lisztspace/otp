@@ -603,7 +603,7 @@ init_server(Pid, FileName, Options, St0) ->
     SourceName = proplists:get_value(source_name, Options, FileName),
     Pdm = proplists:get_value(macros, Options, []),
     Features = proplists:get_value(features, Options, []),
-    Ms0 = predef_macros(SourceName),
+    Ms0 = predef_macros(SourceName, Features),
     case user_predef(Pdm, Ms0) of
 	{ok,Ms1} ->
             DefEncoding = proplists:get_value(default_encoding, Options,
@@ -638,10 +638,11 @@ init_server(Pid, FileName, Options, St0) ->
 %%  Initialise the macro dictionary with the default predefined macros,
 %%  FILE, LINE, MODULE as undefined, MACHINE and MACHINE value.
 
-predef_macros(File) ->
+predef_macros(File, EnabledFeatures) ->
     Machine = list_to_atom(erlang:system_info(machine)),
     Anno = line1(),
     OtpVersion = list_to_integer(erlang:system_info(otp_release)),
+    FtrAvailable = make_ftr_available(),
     Defs = [{'FILE', 	           {none,[{string,Anno,File}]}},
 	    {'FUNCTION_NAME',      undefined},
 	    {'FUNCTION_ARITY',     undefined},
@@ -652,9 +653,39 @@ predef_macros(File) ->
 	    {'BASE_MODULE_STRING', undefined},
 	    {'MACHINE',	           {none,[{atom,Anno,Machine}]}},
 	    {Machine,	           {none,[{atom,Anno,true}]}},
-	    {'OTP_RELEASE',	   {none,[{integer,Anno,OtpVersion}]}}
+	    {'OTP_RELEASE',	   {none,[{integer,Anno,OtpVersion}]}},
+            %% FIXME Understand this has to be a list.  Is it because
+            %% it takes an argument?
+            {'FEATURE_AVAILABLE',  [FtrAvailable]},
+            {'FEATURE_ENABLED', [make_ftr_available(EnabledFeatures)]}
 	   ],
     maps:from_list(Defs).
+
+%% Construct ?FEATURE_AVAILABLE macro - takes one argument and returns
+%% true if feature is available.
+make_ftr_available() ->
+    make_ftr_available(features:features()).
+
+make_ftr_available(Features) ->
+    Anno = line1(),
+    Fexp = fun(Ftr) -> [{'(',Anno},
+                        {var,Anno,'X'},
+                        {')',Anno},
+                        {'==',Anno},
+                        {atom,Anno,Ftr}]
+           end,
+    Available =
+        case Features of
+            [] -> [{atom,Anno,false}];
+            [Ftr| Ftrs] ->
+                [{'(',Anno}|
+                 lists:foldl(fun(F, Expr) ->
+                                    Fexp(F) ++ [{'orelse',Anno} | Expr]
+                            end,
+                            Fexp(Ftr) ++ [{')',Anno}],
+                            Ftrs)]
+        end,
+    {1, {['X'], Available}}.
 
 %% user_predef(PreDefMacros, Macros) ->
 %%	{ok,MacroDict} | {error,E}
@@ -838,8 +869,11 @@ scan_toks(From, St0) ->
             undefined ->
                 St0;
             Feature ->
+                Macs0 = St0#epp.macs,
                 Ftrs0 = St0#epp.features,
                 Ftrs1 = [Feature| Ftrs0],
+                Macs1 = Macs0#{'FEATURE_ENABLED' =>
+                                   [make_ftr_available(Ftrs1)]},
                 ScanOptsX = St0#epp.erl_scan_opts,
                 ResWordFun =
                     case proplists:get_value(reserved_word_fun, ScanOptsX) of
@@ -853,7 +887,8 @@ scan_toks(From, St0) ->
                 %% change.
                 St1 = St0#epp{erl_scan_opts =
                                   [{reserved_word_fun, ResWordFun1}],
-                              features = Ftrs1},
+                              features = Ftrs1,
+                              macs = Macs1},
                 put(enable_feature, undefined),
                 St1
         end,
