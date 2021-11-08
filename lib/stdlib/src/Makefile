@@ -78,6 +78,7 @@ MODULES= \
 	escript \
 	ets \
 	eval_bits \
+	features \
 	file_sorter \
 	filelib \
 	filename \
