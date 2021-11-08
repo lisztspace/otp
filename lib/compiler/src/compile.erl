@@ -1018,25 +1018,15 @@ do_parse_module(DefEncoding, #compile{ifile=File,options=Opts,dir=Dir}=St) ->
                         false ->
                             1
                     end,
-
-    %% FIXME: Rewrite this when the enable feature EEP has been implemented.
-    ResWordFun = case proplists:get_value(enable_feature, Opts, []) of
-                     maybe_expr ->
-                         fun('maybe') -> true;
-                            ('else') -> true;
-                            (Other) -> erl_scan:reserved_word(Other)
-                         end;
-                     _ ->
-                         fun erl_scan:reserved_word/1
-                 end,
-
+    {Features, ResWordFun} = make_reserved_word_fun(Opts),
     R = epp:parse_file(File,
                        [{includes,[".",Dir|inc_paths(Opts)]},
                         {source_name, SourceName},
                         {macros,pre_defs(Opts)},
                         {default_encoding,DefEncoding},
                         {location,StartLocation},
-                        {reserved_word_fun,ResWordFun},
+                        {reserved_word_fun, ResWordFun},
+                        {features, Features},
                         extra]),
     case R of
 	{ok,Forms0,Extra} ->
@@ -1052,6 +1042,19 @@ do_parse_module(DefEncoding, #compile{ifile=File,options=Opts,dir=Dir}=St) ->
 	    Es = [{St#compile.ifile,[{none,?MODULE,{epp,E}}]}],
 	    {error,St#compile{errors=St#compile.errors ++ Es}}
     end.
+
+%% Returns list of enabled features and a new reserved words function
+make_reserved_word_fun(Opts) ->
+    Features = lists:filtermap(fun({enable_feature, Ftr}) ->
+                                    {true, Ftr};
+                               (_) -> false
+                            end,
+                            Opts),
+    Fun =
+        features:resword_add_features(Features,
+                                      fun erl_scan:reserved_word/1),
+    {Features, Fun}.
+
 
 with_columns(Opts) ->
     case proplists:get_value(error_location, Opts, column) of

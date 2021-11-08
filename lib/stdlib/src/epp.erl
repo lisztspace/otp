@@ -72,9 +72,10 @@
               uses = #{}			%Macro use structure
 	            :: #{name() => [{argspec(), [used()]}]},
               default_encoding = ?DEFAULT_ENCODING :: source_encoding(),
-	      pre_opened = false :: boolean(),
-              fname = [] :: function_name_type(),
-              erl_scan_opts = [] :: erl_scan:options()
+              pre_opened = false :: boolean(),
+              erl_scan_opts = [] :: [_],
+              features = [] :: [atom()],
+              fname = [] :: function_name_type()
 	     }).
 
 %% open(Options)
@@ -298,6 +299,8 @@ parse_file(Ifile, Path, Predefs) ->
 		  {'macros', PredefMacros :: macros()} |
 		  {'default_encoding', DefEncoding :: source_encoding()} |
 		  {'location',StartLocation :: erl_anno:location()} |
+                  {'reserved_word_fun', Fun :: fun((atom()) -> boolean())} |
+                  {'features', [Feature :: atom()]} |
 		  'extra'],
       Form :: erl_parse:abstract_form()
             | {'error', ErrorInfo}
@@ -332,6 +335,11 @@ parse_file(Ifile, Options) ->
 parse_file(Epp) ->
     case parse_erl_form(Epp) of
 	{ok,Form} ->
+            case Form of
+                {attribute, _, compile, {enable_feature, Ftr}} ->
+                    Epp ! {enable_feature, Ftr};
+                _ -> ok
+            end,
             [Form|parse_file(Epp)];
 	{error,E} ->
 	    [{error,E}|parse_file(Epp)];
@@ -594,6 +602,7 @@ server(Pid, Name, Options) ->
 init_server(Pid, FileName, Options, St0) ->
     SourceName = proplists:get_value(source_name, Options, FileName),
     Pdm = proplists:get_value(macros, Options, []),
+    Features = proplists:get_value(features, Options, []),
     Ms0 = predef_macros(SourceName),
     case user_predef(Pdm, Ms0) of
 	{ok,Ms1} ->
@@ -605,16 +614,17 @@ init_server(Pid, FileName, Options, St0) ->
             %% first in path
             Path = [filename:dirname(FileName) |
                     proplists:get_value(includes, Options, [])],
-
-            ResWordFun = proplists:get_value(reserved_word_fun, Options,
-                                             fun erl_scan:reserved_word/1),
-
+            ResWordFun =
+                proplists:get_value(reserved_word_fun, Options,
+                                    fun erl_scan:reserved_word/1),
             %% the default location is 1 for backwards compatibility, not {1,1}
             AtLocation = proplists:get_value(location, Options, 1),
             St = St0#epp{delta=0, name=SourceName, name2=SourceName,
 			 path=Path, location=AtLocation, macs=Ms1,
 			 default_encoding=DefEncoding,
-                         erl_scan_opts=[{reserved_word_fun,ResWordFun}]},
+                         erl_scan_opts =
+                             [{reserved_word_fun, ResWordFun}],
+                         features = Features},
             From = wait_request(St),
             Anno = erl_anno:new(AtLocation),
             enter_file_reply(From, file_name(SourceName), Anno,
@@ -680,6 +690,17 @@ user_predef([], Ms) -> {ok,Ms}.
 wait_request(St) ->
     receive
 	{epp_request,From,scan_erl_form} -> From;
+        {enable_feature, Feature} ->
+            Features = St#epp.features,
+            St1 = case lists:member(Feature, Features) of
+                      true ->
+                          %% Feature already enabled - warn?
+                          St;
+                      false ->
+                          put(enable_feature, Feature),
+                          St#epp{features = [Feature| Features]}
+                  end,
+            wait_request(St1);
 	{epp_request,From,macro_defs} ->
 	    %% Return the old format to avoid any incompability issues.
 	    Defs = [{{atom,K},V} || {K,V} <- maps:to_list(St#epp.macs)],
@@ -811,8 +832,34 @@ leave_file(From, St) ->
 %% scan_toks(From, EppState)
 %% scan_toks(Tokens, From, EppState)
 
-scan_toks(From, St) ->
-    case io:scan_erl_form(St#epp.file, '', St#epp.location, St#epp.erl_scan_opts) of
+scan_toks(From, St0) ->
+    St =
+        case get(enable_feature) of
+            undefined ->
+                St0;
+            Feature ->
+                Ftrs0 = St0#epp.features,
+                Ftrs1 = [Feature| Ftrs0],
+                ScanOptsX = St0#epp.erl_scan_opts,
+                ResWordFun =
+                    case proplists:get_value(reserved_word_fun, ScanOptsX) of
+                        undefined -> fun erl_scan:reserved_word/1;
+                        Fun -> Fun
+                    end,
+                ResWordFun1 =
+                    features:resword_add_feature(Feature, ResWordFun),
+                %% FIXME WE need to keep any other scan_opts present.
+                %% RIght now, there are no other, but that might
+                %% change.
+                St1 = St0#epp{erl_scan_opts =
+                                  [{reserved_word_fun, ResWordFun1}],
+                              features = Ftrs1},
+                put(enable_feature, undefined),
+                St1
+        end,
+
+    #epp{file = File, location = Loc, erl_scan_opts = ScanOpts} = St,
+    case io:scan_erl_form(File, '', Loc, ScanOpts) of
 	{ok,Toks,Cl} ->
 	    scan_toks(Toks, From, St#epp{location=Cl});
 	{error,E,Cl} ->
