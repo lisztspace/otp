@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1997-2021. All Rights Reserved.
+%% Copyright Ericsson AB 1997-2022. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -109,6 +109,9 @@ compile1(Files, Opts) ->
 parse_generic_option("b"++Opt, T0, Opts) ->
     {OutputType,T} = get_option("b", Opt, T0),
     compile1(T, Opts#options{output_type=list_to_atom(OutputType)});
+%% parse_generic_option("c"++Opt, T0, Opts) ->
+%%     {InputType,T} = get_option("c", Opt, T0),
+%%     compile1(T, Opts#options{input_type=[$.| InputType]});
 parse_generic_option("D"++Opt, T0, #options{defines=Defs}=Opts) ->
     {Val0,T} = get_option("D", Opt, T0),
     {Key0,Val1} = split_at_equals(Val0, []),
@@ -171,6 +174,17 @@ parse_generic_option("P", T, #options{specific=Spec}=Opts) ->
     compile1(T, Opts#options{specific=['P'|Spec]});
 parse_generic_option("S", T, #options{specific=Spec}=Opts) ->
     compile1(T, Opts#options{specific=['S'|Spec]});
+parse_generic_option("enable-feature" ++ Str, T0,
+                     #options{specific = Spec} = Opts) ->
+    {FtrStr, T} = get_option("enable-feature", Str, T0),
+    Feature = list_to_atom(FtrStr),
+    compile1(T, Opts#options{
+                  specific = [{enable_feature, Feature}| Spec]});
+parse_generic_option("disable-feature" ++ Str, T0,
+                     #options{specific = Spec} = Opts) ->
+    {FtrStr, T} = get_option("disable-feature", Str, T0),
+    Feature = list_to_atom(FtrStr),
+    compile1(T, Opts#options{specific = [{disable_feature, Feature}| Spec]});
 parse_generic_option(Option, _T, _Opts) ->
     usage(io_lib:format("Unknown option: -~ts\n", [Option])).
 

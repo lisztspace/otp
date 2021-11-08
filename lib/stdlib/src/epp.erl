@@ -338,6 +338,8 @@ parse_file(Epp) ->
             case Form of
                 {attribute, _, compile, {enable_feature, Ftr}} ->
                     Epp ! {enable_feature, Ftr};
+                {attribute, _, compile, {disable_feature, Ftr}} ->
+                    Epp ! {disable_feature, Ftr};
                 _ -> ok
             end,
             [Form|parse_file(Epp)];
@@ -732,6 +734,17 @@ wait_request(St) ->
                           St#epp{features = [Feature| Features]}
                   end,
             wait_request(St1);
+        {disable_feature, Feature} ->
+            Features = St#epp.features,
+            St1 = case lists:member(Feature, Features) of
+                      false ->
+                          %% Feature not enabled - warn?
+                          St;
+                      true ->
+                          put(disable_feature, Feature),
+                          St#epp{features = Features -- [Feature]}
+                  end,
+            wait_request(St1);
 	{epp_request,From,macro_defs} ->
 	    %% Return the old format to avoid any incompability issues.
 	    Defs = [{{atom,K},V} || {K,V} <- maps:to_list(St#epp.macs)],
@@ -864,34 +877,8 @@ leave_file(From, St) ->
 %% scan_toks(Tokens, From, EppState)
 
 scan_toks(From, St0) ->
-    St =
-        case get(enable_feature) of
-            undefined ->
-                St0;
-            Feature ->
-                Macs0 = St0#epp.macs,
-                Ftrs0 = St0#epp.features,
-                Ftrs1 = [Feature| Ftrs0],
-                Macs1 = Macs0#{'FEATURE_ENABLED' =>
-                                   [make_ftr_available(Ftrs1)]},
-                ScanOptsX = St0#epp.erl_scan_opts,
-                ResWordFun =
-                    case proplists:get_value(reserved_word_fun, ScanOptsX) of
-                        undefined -> fun erl_scan:reserved_word/1;
-                        Fun -> Fun
-                    end,
-                ResWordFun1 =
-                    features:resword_add_feature(Feature, ResWordFun),
-                %% FIXME WE need to keep any other scan_opts present.
-                %% RIght now, there are no other, but that might
-                %% change.
-                St1 = St0#epp{erl_scan_opts =
-                                  [{reserved_word_fun, ResWordFun1}],
-                              features = Ftrs1,
-                              macs = Macs1},
-                put(enable_feature, undefined),
-                St1
-        end,
+    St1 = enable_feature(St0),
+    St = disable_feature(St1),
 
     #epp{file = File, location = Loc, erl_scan_opts = ScanOpts} = St,
     case io:scan_erl_form(File, '', Loc, ScanOpts) of
@@ -905,6 +892,46 @@ scan_toks(From, St0) ->
 	{error,_E} ->
             epp_reply(From, {error,{St#epp.location,epp,cannot_parse}}),
 	    leave_file(wait_request(St), St)	%This serious, just exit!
+    end.
+
+enable_feature(St0) ->
+    Ind = enable_feature,
+    NewFun = fun features:resword_add_feature/2,
+    NewFtrs = fun(F, Fs) -> [F| Fs] end,
+    fix_features(St0, Ind, NewFun, NewFtrs).
+
+disable_feature(St0) ->
+    Ind = disable_feature,
+    NewFun = fun features:resword_remove_feature/2,
+    NewFtrs = fun(F, Fs) -> Fs -- [F] end,
+    fix_features(St0, Ind, NewFun, NewFtrs).
+
+fix_features(St0, Ind, NewFun, NewFtrs) ->
+    case get(Ind) of
+        undefined ->
+            St0;
+        Feature ->
+            Macs0 = St0#epp.macs,
+            Ftrs0 = St0#epp.features,
+            Ftrs1 = NewFtrs(Feature, Ftrs0),
+            Macs1 = Macs0#{'FEATURE_ENABLED' =>
+                               [make_ftr_available(Ftrs1)]},
+            ScanOptsX = St0#epp.erl_scan_opts,
+            ResWordFun =
+                case proplists:get_value(reserved_word_fun, ScanOptsX) of
+                    undefined -> fun erl_scan:reserved_word/1;
+                    Fun -> Fun
+                end,
+            ResWordFun1 = NewFun(Feature, ResWordFun),
+            %% FIXME WE need to keep any other scan_opts present.
+            %% Right now, there are no other, but that might
+            %% change.
+            StX = St0#epp{erl_scan_opts =
+                              [{reserved_word_fun, ResWordFun1}],
+                          features = Ftrs1,
+                          macs = Macs1},
+            put(Ind, undefined),
+            StX
     end.
 
 scan_toks([{'-',_Lh},{atom,_Ld,define}=Define|Toks], From, St) ->
