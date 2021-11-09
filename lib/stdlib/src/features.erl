@@ -61,7 +61,7 @@
 %% Currently know features
 -spec features() -> [atom()].
 features() ->
-    [ifn_expr, maybe_expr].
+    [ifn_expr, maybe_expr, ifnot_expr, unless_expr].
 
 is_valid_feature(Ftr) ->
     lists:member(Ftr, features()).
@@ -106,6 +106,13 @@ feature_info(maybe_expr) ->
       status => {experimental, {25, 0}},
       type => extension,
       options => []};
+feature_info(unless_expr) ->
+    #{description =>
+          "Introduction of new expression `unless <cond> -> <body> end."
+      "Truly experimental.",
+      status => {experimental, {25, 0}},
+      type => extension,
+      options => []};
 feature_info(Ftr) ->
     ?VALID_FEATURE(Ftr).
 
@@ -118,6 +125,10 @@ reserved_words(ifn_expr) ->
     ['ifn'];
 reserved_words(maybe_expr) ->
     ['maybe', 'else'];
+reserved_words(ifnot_expr) ->
+    ['ifnot'];
+reserved_words(unless_expr) ->
+    ['unless'];
 reserved_words(Ftr) ->
     ?VALID_FEATURE(Ftr).
 
