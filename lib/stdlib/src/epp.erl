@@ -644,7 +644,7 @@ predef_macros(File, EnabledFeatures) ->
     Machine = list_to_atom(erlang:system_info(machine)),
     Anno = line1(),
     OtpVersion = list_to_integer(erlang:system_info(otp_release)),
-    FtrAvailable = make_ftr_available(),
+    AvailableFeatures = features:features(),
     Defs = [{'FILE', 	           {none,[{string,Anno,File}]}},
 	    {'FUNCTION_NAME',      undefined},
 	    {'FUNCTION_ARITY',     undefined},
@@ -658,36 +658,34 @@ predef_macros(File, EnabledFeatures) ->
 	    {'OTP_RELEASE',	   {none,[{integer,Anno,OtpVersion}]}},
             %% FIXME Understand this has to be a list.  Is it because
             %% it takes an argument?
-            {'FEATURE_AVAILABLE',  [FtrAvailable]},
-            {'FEATURE_ENABLED', [make_ftr_available(EnabledFeatures)]}
+            {'FEATURE_AVAILABLE',  [ftr_macro(AvailableFeatures)]},
+            {'FEATURE_ENABLED', [ftr_macro(EnabledFeatures)]}
 	   ],
     maps:from_list(Defs).
 
-%% Construct ?FEATURE_AVAILABLE macro - takes one argument and returns
-%% true if feature is available.
-make_ftr_available() ->
-    make_ftr_available(features:features()).
-
-make_ftr_available(Features) ->
+%% Make macro definition from a list of features.  The macro takes one
+%% argument and returns true when argument is available as a feature.
+ftr_macro(Features) ->
     Anno = line1(),
-    Fexp = fun(Ftr) -> [{'(',Anno},
-                        {var,Anno,'X'},
-                        {')',Anno},
-                        {'==',Anno},
-                        {atom,Anno,Ftr}]
+    Arg = 'X',
+    Fexp = fun(Ftr) -> [{'(', Anno},
+                        {var, Anno, Arg},
+                        {')', Anno},
+                        {'==', Anno},
+                        {atom, Anno, Ftr}]
            end,
-    Available =
+    Body =
         case Features of
-            [] -> [{atom,Anno,false}];
+            [] -> [{atom, Anno, false}];
             [Ftr| Ftrs] ->
-                [{'(',Anno}|
+                [{'(', Anno}|
                  lists:foldl(fun(F, Expr) ->
-                                    Fexp(F) ++ [{'orelse',Anno} | Expr]
+                                     Fexp(F) ++ [{'orelse', Anno} | Expr]
                             end,
-                            Fexp(Ftr) ++ [{')',Anno}],
+                            Fexp(Ftr) ++ [{')', Anno}],
                             Ftrs)]
         end,
-    {1, {['X'], Available}}.
+    {1, {[Arg], Body}}.
 
 %% user_predef(PreDefMacros, Macros) ->
 %%	{ok,MacroDict} | {error,E}
@@ -877,8 +875,7 @@ leave_file(From, St) ->
 %% scan_toks(Tokens, From, EppState)
 
 scan_toks(From, St0) ->
-    St1 = enable_feature(St0),
-    St = disable_feature(St1),
+    St = update_features(St0),
 
     #epp{file = File, location = Loc, erl_scan_opts = ScanOpts} = St,
     case io:scan_erl_form(File, '', Loc, ScanOpts) of
@@ -894,19 +891,17 @@ scan_toks(From, St0) ->
 	    leave_file(wait_request(St), St)	%This serious, just exit!
     end.
 
-enable_feature(St0) ->
-    Ind = enable_feature,
-    NewFun = fun features:resword_add_feature/2,
-    NewFtrs = fun(F, Fs) -> [F| Fs] end,
-    fix_features(St0, Ind, NewFun, NewFtrs).
+update_features(St0) ->
+    St1 = update_features(St0,
+                          enable_feature,
+                          fun features:resword_add_feature/2,
+                          fun(F, Fs) -> [F| Fs] end),
+    update_features(St1,
+                    disable_feature,
+                    fun features:resword_remove_feature/2,
+                    fun(F, Fs) -> Fs -- [F] end).
 
-disable_feature(St0) ->
-    Ind = disable_feature,
-    NewFun = fun features:resword_remove_feature/2,
-    NewFtrs = fun(F, Fs) -> Fs -- [F] end,
-    fix_features(St0, Ind, NewFun, NewFtrs).
-
-fix_features(St0, Ind, NewFun, NewFtrs) ->
+update_features(St0, Ind, NewFun, NewFtrs) ->
     case get(Ind) of
         undefined ->
             St0;
@@ -915,7 +910,7 @@ fix_features(St0, Ind, NewFun, NewFtrs) ->
             Ftrs0 = St0#epp.features,
             Ftrs1 = NewFtrs(Feature, Ftrs0),
             Macs1 = Macs0#{'FEATURE_ENABLED' =>
-                               [make_ftr_available(Ftrs1)]},
+                               [ftr_macro(Ftrs1)]},
             ScanOptsX = St0#epp.erl_scan_opts,
             ResWordFun =
                 case proplists:get_value(reserved_word_fun, ScanOptsX) of
