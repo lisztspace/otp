@@ -346,12 +346,12 @@ server_pwdfun_option(Config) ->
 				 {user_dir, UserDir}]),
     ssh:stop_daemon(Pid).
 
-    
+
 %%--------------------------------------------------------------------
 %%% validate to server that uses the 'pwdfun/4' option
 server_pwdfun_4_option(Config) ->
     UserDir = proplists:get_value(user_dir, Config),
-    SysDir = proplists:get_value(data_dir, Config),	  
+    SysDir = proplists:get_value(data_dir, Config),
     PWDFUN = fun("foo",Pwd,{_,_},undefined) -> Pwd=="bar";
 		("fie",Pwd,{_,_},undefined) -> {Pwd=="bar",new_state};
 		("bandit",_,_,_) -> disconnect;
@@ -377,7 +377,7 @@ server_pwdfun_4_option(Config) ->
     ssh:close(ConnectionRef2),
 
     Reason = "Unable to connect using the available authentication methods",
-    
+
     {error, Reason} =
 	ssh:connect(Host, Port, [{silently_accept_hosts, true},
                                  {save_accepted_host, false},
@@ -408,7 +408,7 @@ server_pwdfun_4_option(Config) ->
 				 {user_dir, UserDir}]),
     ssh:stop_daemon(Pid).
 
-    
+
 %%--------------------------------------------------------------------
 server_keyboard_interactive(Config) ->
     UserDir = proplists:get_value(user_dir, Config),
@@ -1123,7 +1123,8 @@ ssh_connect_arg4_timeout(_Config) ->
 	    end;
 
 	{done, Client, {error,Other}, _T0} ->
-	    ct:log("Error message \"~p\" from the client is unexpected.",[{error,Other}]),
+	    ct:log("Error message \"~p\" from the client is unexpected.",
+                   [{error,Other}]),
 	    {fail, "Unexpected error message"};
 
 	{done, Client, {ok,_Ref}, _T0} ->
@@ -1818,10 +1819,10 @@ config_file_modify_algorithms_order(Config) ->
             [K2] = proplists:get_value(kex,
                    proplists:get_value(preferred_algorithms,
                    proplists:get_value(options, ServerInfo))),
-            
+
             {badrpc, {'EXIT', {{badmatch,ExpectedError}, _}}} =
-                %% No common kex algorithms expected. 
-                rpc:call(Node, ssh_test_lib, std_connect, [Config, Host, Port, []]), 
+                %% No common kex algorithms expected.
+                rpc:call(Node, ssh_test_lib, std_connect, [Config, Host, Port, []]),
             {error,"Key exchange failed"} = ExpectedError,
 
             C = rpc:call(Node, ssh_test_lib, std_connect,
