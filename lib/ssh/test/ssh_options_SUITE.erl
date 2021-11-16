@@ -291,27 +291,29 @@ server_userpassword_option(Config) when is_list(Config) ->
 
     Reason = "Unable to connect using the available authentication methods",
 
-    {error, Reason} =
+    {error, {{rfc_code, _}, _} = Err0} =
 	ssh:connect(Host, Port, [{silently_accept_hosts, true},
                                  {save_accepted_host, false},
 				 {user, "foo"},
 				 {password, "morot"},
 				 {user_interaction, false},
 				 {user_dir, UserDir}]),
-    {error, Reason} =
+    Reason = ssh_error:description(Err0),
+    {error, {{rfc_code, _}, _} = Err1} =
 	ssh:connect(Host, Port, [{silently_accept_hosts, true},
                                  {save_accepted_host, false},
 				 {user, "vego"},
 				 {password, "foo"},
 				 {user_interaction, false},
 				 {user_dir, UserDir}]),
+    Reason = ssh_error:description(Err1),
     ssh:stop_daemon(Pid).
 
 %%--------------------------------------------------------------------
 %%% validate to server that uses the 'pwdfun' option
 server_pwdfun_option(Config) ->
     UserDir = proplists:get_value(user_dir, Config),
-    SysDir = proplists:get_value(data_dir, Config),	  
+    SysDir = proplists:get_value(data_dir, Config),
     CHKPWD = fun("foo",Pwd) -> Pwd=="bar";
 		(_,_) -> false
 	     end,
@@ -327,7 +329,7 @@ server_pwdfun_option(Config) ->
     ssh:close(ConnectionRef),
 
     Reason = "Unable to connect using the available authentication methods",
-    
+
     {error, Reason} =
 	ssh:connect(Host, Port, [{silently_accept_hosts, true},
                                  {save_accepted_host, false},
