@@ -158,7 +158,8 @@ connect(Host, Port, Options0) ->
 
 do_connect(Host, Port, Options) ->
     R = ssh:connect(Host, Port, Options),
-    ct:log("~p:~p ssh:connect(~p, ~p, ~p)~n -> ~p",[?MODULE,?LINE,Host, Port, Options, R]),
+    ct:log("~p:~p ssh:connect(~p, ~p, ~p)~n -> ~p",
+           [?MODULE, ?LINE, Host, Port, Options, R]),
     {ok, ConnectionRef} = R,
     ConnectionRef.
 
@@ -872,8 +873,8 @@ busy_wait(Nus, T0) ->
     T = erlang:system_time(microsecond) - T0,
     Tleft = Nus - T,
     if
-	Tleft > 2000 -> 
-	    sleep_millisec((Tleft-1500) div 1000), % μs -> ms
+	Tleft > 2000 ->
+	    sleep_millisec((Tleft-1500) div 1000), % µs -> ms
 	    busy_wait(Nus,T0);
 	Tleft > 1 ->
 	    busy_wait(Nus, T0);
