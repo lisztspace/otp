@@ -157,7 +157,7 @@ stop(ConnectionHandler)->
 %%% Some other module has decided to disconnect.
 
 -spec disconnect(Code::integer(), Details::iodata(),
-                      Module::atom(), Line::integer()) -> no_return().
+                 Module::atom(), Line::integer()) -> no_return().
 %% . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
 % Preferable called with the macro ?DISCONNECT
