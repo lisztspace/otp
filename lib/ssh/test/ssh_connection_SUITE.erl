@@ -271,31 +271,40 @@ simple_exec_two_socks(_Config) ->
 
 %%--------------------------------------------------------------------
 connect2_invalid_options(_Config) ->
-    {error, {invalid_options, _}} = ssh:connect(bogus_socket, {bad, option}).
+    {error, {{invalid_options, _}, _} = Err} =
+        ssh:connect(bogus_socket, {bad, option}),
+    true = is_list(ssh_error:description(Err)).
 
 connect3_invalid_port(_Config) ->
-    {error, {invalid_port, _}} = ssh:connect(bogus_host, noport, [{key, value}]).
+    {error, {invalid_port, _} = Err} =
+        ssh:connect(bogus_host, noport, [{key, value}]),
+    true = is_list(ssh_error:description(Err)).
 
 connect3_invalid_options(_Config) ->
-    {error, {invalid_options, _}} = ssh:connect(bogus_host, 1337, bad_options).
+    {error, {{invalid_options, _}, _} = Err} =
+        ssh:connect(bogus_host, 1337, bad_options),
+    true = is_list(ssh_error:description(Err)).
 
 connect3_invalid_timeout_0(_Config) ->
-    {error, {invalid_timeout, _}} =
-        ssh:connect(bogus_socket, [{key, value}], short).
+    {error, {invalid_timeout, _} = Err} =
+        ssh:connect(bogus_socket, [{key, value}], short),
+    true = is_list(ssh_error:description(Err)).
 
 connect3_invalid_timeout_1(_Config) ->
-    {error, {invalid_timeout, _}} =
-        ssh:connect(bogus_socket, [{key, value}], -1).
+    {error, {invalid_timeout, _} = Err} =
+        ssh:connect(bogus_socket, [{key, value}], -1),
+    true = is_list(ssh_error:description(Err)).
 
 connect3_invalid_both(_Config) ->
     %% The actual reason is implementation dependent.
-    {error, {_Reason, _}} =
-        ssh:connect(bogus, no_list_or_port, no_list_or_timeout).
+    {error, {_Reason, _} = Err} =
+        ssh:connect(bogus, no_list_or_port, no_list_or_timeout),
+    true = is_list(ssh_error:description(Err)).
 
 connect_invalid_port(Config) ->
     {Pid, Host, _Port, UserDir} = daemon_start(Config),
 
-    {error, {invalid_port, _}} =
+    {error, {invalid_port, _} = Err} =
         ssh:connect(Host, undefined,
                     [{silently_accept_hosts, true},
                      {user, "foo"},
@@ -303,13 +312,14 @@ connect_invalid_port(Config) ->
                      {user_interaction, false},
                      {user_dir, UserDir}],
                     infinity),
+    true = is_list(ssh_error:description(Err)),
 
     ssh:stop_daemon(Pid).
 
 connect_invalid_timeout_0(Config) ->
     {Pid, Host, Port, UserDir} = daemon_start(Config),
 
-    {error, {invalid_timeout, _}} =
+    {error, {invalid_timeout, _} = Err} =
         ssh:connect(Host, Port,
                     [{silently_accept_hosts, true},
                      {user, "foo"},
@@ -317,13 +327,14 @@ connect_invalid_timeout_0(Config) ->
                      {user_interaction, false},
                      {user_dir, UserDir}],
                    longer),
+    true = is_list(ssh_error:description(Err)),
 
     ssh:stop_daemon(Pid).
 
 connect_invalid_timeout_1(Config) ->
     {Pid, Host, Port, UserDir} = daemon_start(Config),
 
-    {error, {invalid_timeout, _}} =
+    {error, {invalid_timeout, _} = Err} =
         ssh:connect(Host, Port,
                     [{silently_accept_hosts, true},
                      {user, "foo"},
@@ -331,16 +342,18 @@ connect_invalid_timeout_1(Config) ->
                      {user_interaction, false},
                      {user_dir, UserDir}],
                    -1),
+    true = is_list(ssh_error:description(Err)),
 
     ssh:stop_daemon(Pid).
 
 connect_invalid_options(Config) ->
     {Pid, Host, Port, _UserDir} = daemon_start(Config),
 
-    {error, {invalid_options, _}} =
+    {error, {{invalid_options, _}, _} = Err} =
         ssh:connect(Host, Port,
                     {user, "foo"},
                     infinity),
+    true = is_list(ssh_error:description(Err)),
 
     ssh:stop_daemon(Pid).
 
@@ -349,10 +362,11 @@ connect4_invalid_two_0(Config) ->
     {Pid, Host, _Port, _UserDir} = daemon_start(Config),
 
     %% Actual error implementation dependent
-    {error, _} =
+    {error, Err} =
         ssh:connect(Host, noport,
                     {user, "foo"},
                     infinity),
+    true = is_list(ssh_error:description(Err)),
 
     ssh:stop_daemon(Pid).
 
@@ -360,10 +374,11 @@ connect4_invalid_two_1(Config) ->
     {Pid, Host, Port, _UserDir} = daemon_start(Config),
 
     %% Actual error implementation dependent
-    {error, _} =
+    {error, Err} =
         ssh:connect(Host, Port,
                     {user, "foo"},
                     short),
+    true = is_list(ssh_error:description(Err)),
 
     ssh:stop_daemon(Pid).
 
@@ -371,10 +386,11 @@ connect4_invalid_two_2(Config) ->
     {Pid, Host, Port, _UserDir} = daemon_start(Config),
 
     %% Actual error implementation dependent
-    {error, _} =
+    {error, Err} =
         ssh:connect(Host, newport,
                     [{user, "foo"}],
                     -1),
+    true = is_list(ssh_error:description(Err)),
 
     ssh:stop_daemon(Pid).
 
@@ -383,10 +399,11 @@ connect4_invalid_three(Config) ->
     {Pid, Host, Port, _UserDir} = daemon_start(Config),
 
     %% Actual error implementation dependent
-    {error, _} =
+    {error, {_, _} = Err} =
         ssh:connect(Host, teleport,
                     {user, "foo"},
                     fortnight),
+    true = is_list(ssh_error:description(Err)),
 
     ssh:stop_daemon(Pid).
 
@@ -405,39 +422,46 @@ daemon_start(Config) ->
 %%--------------------------------------------------------------------
 connect_sock_not_tcp(_Config) ->
     {ok,Sock} = gen_udp:open(0, []),
-    {error, not_tcp_socket} = ssh:connect(Sock, [{save_accepted_host, false},
-                                                 {silently_accept_hosts, true},
-                                                 {user_interaction, true}]),
+    {error, {not_tcp_socket, _} = Err} =
+        ssh:connect(Sock, [{save_accepted_host, false},
+                           {silently_accept_hosts, true},
+                           {user_interaction, true}]),
+    true = is_list(ssh_error:description(Err)),
     gen_udp:close(Sock).
 
 %%--------------------------------------------------------------------
 connect_timeout(_Config) ->
     {ok,Sl} = gen_tcp:listen(0, []),
     {ok, {_,Port}} = inet:sockname(Sl),
-    {error,timeout} = ssh:connect(loopback, Port, [{connect_timeout,2000},
-                                                   {save_accepted_host, false},
-                                                   {silently_accept_hosts, true}]),
+    {error, {timeout, _} = Err} =
+        ssh:connect(loopback, Port, [{connect_timeout,2000},
+                                     {save_accepted_host, false},
+                                     {silently_accept_hosts, true}]),
+    true = is_list(ssh_error:description(Err)),
     gen_tcp:close(Sl).
 
 %%--------------------------------------------------------------------
 daemon_sock_not_tcp(_Config) ->
     {ok,Sock} = gen_udp:open(0, []),
-    {error, not_tcp_socket} = ssh:daemon(Sock),
+    {error, {not_tcp_socket, _} = Err} = ssh:daemon(Sock),
+    true = is_list(ssh_error:description(Err)),
     gen_udp:close(Sock).
 
 %%--------------------------------------------------------------------
 connect_sock_not_passive(_Config) ->
     {ok,Sock} = ssh_test_lib:gen_tcp_connect(?SSH_DEFAULT_PORT, []),
-    {error, not_passive_mode} =
+    {error, {not_passive_mode, _} = Err} =
         ssh:connect(Sock, [{save_accepted_host, false},
                            {silently_accept_hosts, true},
                            {user_interaction, true}]),
+    true = is_list(ssh_error:description(Err)),
     gen_tcp:close(Sock).
 
 %%--------------------------------------------------------------------
 daemon_sock_not_passive(_Config) ->
     {ok,Sock} = ssh_test_lib:gen_tcp_connect(?SSH_DEFAULT_PORT, []),
-    {error, not_passive_mode} = ssh:daemon(Sock),
+    {error, {not_passive_mode, _} = Err} = ssh:daemon(Sock),
+    true = is_list(ssh_error:description(Err)),
     gen_tcp:close(Sock).
 
 %%--------------------------------------------------------------------
@@ -1379,7 +1403,10 @@ kex_error(Config) ->
             ok = logger:remove_handler(kex_error),
             ct:fail("expected failure", [])
     catch
-        error:{badmatch,{error,"Key exchange failed"}} ->
+        %% FIXME change error tuple
+        %% Description "Key exchange failed"
+        error:{badmatch,{error, {{rfc_code, 3}, _} = Err}} ->
+            "Key exchange failed" = ssh_error:description(Err),
             %% ok
             receive
                 {Ref, ErrMsgTxt} ->
@@ -1433,13 +1460,15 @@ stop_listener(Config) when is_list(Config) ->
 
     ssh:stop_listener(Host, Port),
 
-    {error, _} = ssh:connect(Host, Port, [{silently_accept_hosts, true},
-                                          {save_accepted_host, false},
-                                          {save_accepted_host, false},
-					  {user, "foo"},
-					  {password, "morot"},
-					  {user_interaction, true},
-					  {user_dir, UserDir}]),
+    {error, {_, _} = Err0} =
+        ssh:connect(Host, Port, [{silently_accept_hosts, true},
+                                 {save_accepted_host, false},
+                                 {save_accepted_host, false},
+                                 {user, "foo"},
+                                 {password, "morot"},
+                                 {user_interaction, true},
+                                 {user_dir, UserDir}]),
+    true = is_list(ssh_error:description(Err0)),
     success = ssh_connection:exec(ConnectionRef0, ChannelId0,
 				  "testing", infinity),
     receive
@@ -1461,12 +1490,14 @@ stop_listener(Config) when is_list(Config) ->
                                                   {password, "potatis"},
                                                   {user_interaction, true},
                                                   {user_dir, UserDir}]),
-	    {error, _} = ssh:connect(Host, Port, [{silently_accept_hosts, true},
-                                                  {save_accepted_host, false},
-                                                  {user, "foo"},
-                                                  {password, "morot"},
-                                                  {user_interaction, true},
-                                                  {user_dir, UserDir}]),
+	    {error, {_, _} = Err1} =
+                ssh:connect(Host, Port, [{silently_accept_hosts, true},
+                                         {save_accepted_host, false},
+                                         {user, "foo"},
+                                         {password, "morot"},
+                                         {user_interaction, true},
+                                         {user_dir, UserDir}]),
+            true = is_list(ssh_error:description(Err1)),
 	    ssh:close(ConnectionRef0),
 	    ssh:close(ConnectionRef1),
 	    ssh:stop_daemon(Pid0),
