@@ -861,7 +861,10 @@ try_connect(Config) ->
 try_connect_disabled(Config) ->
     try try_connect(Config)
     of _ -> {fail, "non-default algorithm accepted"}
-    catch error:{badmatch,{error,"Service not available"}} -> ok
+            %% "Service not available"
+            %% FIXME We should possibly be able to use a name here,
+            %% but that would mean that macros are needed.
+    catch error:{badmatch,{error,{{rfc_code, 7}, _}}} -> ok
     end.
 
 %%%----------------------------------------------------------------
