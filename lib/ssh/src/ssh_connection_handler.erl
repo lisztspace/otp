@@ -75,6 +75,9 @@
          prohibited_sock_option/1
 	]).
 
+-behaviour(ssh_error).
+-export([error_description/1]).
+
 %%% Behaviour callbacks
 -export([init/1, callback_mode/0, handle_event/4, terminate/3,
 	 format_status/2, code_change/4]).
@@ -522,7 +525,7 @@ handshake(Pid, Ref, Timeout) ->
     after Timeout ->
 	    erlang:demonitor(Ref, [flush]),
 	    ssh_connection_handler:stop(Pid),
-	    {error, timeout}
+	    {error, ?ssh_error(timeout)}
     end.
 
 handshake(Msg, #data{starter = User}) ->
@@ -693,12 +696,15 @@ handle_event(internal, {#ssh_msg_kexinit{},_}, {connected,Role}, D0) ->
     send_bytes(SshPacket, D),
     {next_state, {kexinit,Role,renegotiate}, D, [postpone, {change_callback_module,ssh_fsm_kexinit}]};
 
-handle_event(internal, #ssh_msg_disconnect{description=Desc} = Msg, StateName, D0) ->
+handle_event(internal, #ssh_msg_disconnect{description=Desc, code = Code} = Msg, StateName, D0) ->
     {disconnect, _, RepliesCon} =
 	ssh_connection:handle_msg(Msg, D0#data.connection_state, ?role(StateName), D0#data.ssh_params),
     {Actions,D} = send_replies(RepliesCon, D0),
     disconnect_fun("Received disconnect: "++Desc, D),
-    {stop_and_reply, {shutdown,Desc}, Actions, D};
+    %% FIXME should we perhaps add description and lang fields as
+    %% well?  The message might comes from another server/client, with
+    %% different settings than the client/server.
+    {stop_and_reply, {shutdown, ?ssh_error({rfc_code, Code})}, Actions, D};
 
 handle_event(internal, #ssh_msg_ignore{}, _StateName, _) ->
     keep_state_and_data;
@@ -1195,7 +1201,7 @@ handle_event(info, {CloseTag,Socket}, _StateName,
                         connection_state = C0}) ->
     {Repls, D} = send_replies(ssh_connection:handle_stop(C0), D0),
     disconnect_fun("Received a transport close", D),
-    {stop_and_reply, {shutdown,"Connection closed"}, Repls, D};
+    {stop_and_reply, {shutdown, ?ssh_error(connection_closed)}, Repls, D};
 
 handle_event(info, {timeout, {_, From} = Request}, _,
 	     #data{connection_state = #connection{requests = Requests} = C0} = D) ->
@@ -1743,7 +1749,7 @@ send_disconnect(Code, Reason, DetailedText, Module, Line, StateName, D0) ->
     LogMsg = io_lib:format("Disconnects with code = ~p [RFC4253 11.1]: ~s",
                            [Code, Reason]),
     call_disconnectfun_and_log_cond(LogMsg, DetailedText, Module, Line, StateName, D),
-    {{shutdown,Reason}, D}.
+    {{shutdown, ?ssh_error({rfc_code, Code})}, D}.
 
 call_disconnectfun_and_log_cond(LogMsg, DetailedText, Module, Line, StateName, D) ->
     case disconnect_fun(LogMsg, D) of
@@ -2265,3 +2271,14 @@ ssh_dbg_format(connection_handshake, {Tag, {?MODULE,handshake,3}, Ret}, [Pid|Sta
      ],
      Stack
     }.
+
+error_description(?ssh_error(Details, _, _)) ->
+    description(Details).
+
+description({rfc_code, Code}) ->
+    default_text(Code);
+description(connection_closed) ->
+    "Connection closed";
+description(timeout) ->
+    "Timeout".
+
