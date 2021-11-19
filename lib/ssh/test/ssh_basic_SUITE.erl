@@ -511,14 +511,16 @@ shell_socket(Config) when is_list(Config) ->
     {ok,ActiveSock} = gen_tcp:connect(Host,
                                       Port,
                                       [{active,true}]),
-    {error,not_passive_mode} = ssh:shell(ActiveSock),
+    {error, {not_passive_mode, _} = Err0} = ssh:shell(ActiveSock),
     ct:log("~p:~p active tcp socket failed ok", [?MODULE,?LINE]),
+    true = is_list(ssh_error:description(Err0)),
     gen_tcp:close(ActiveSock),
 
     %% Secondly, test with an UDP socket:
     {ok,BadSock} = gen_udp:open(0),
-    {error,not_tcp_socket} = ssh:shell(BadSock),
+    {error, {not_tcp_socket, _} = Err1} = ssh:shell(BadSock),
     ct:log("~p:~p udp socket failed ok", [?MODULE,?LINE]),
+    true = is_list(ssh_error:description(Err1)),
     gen_udp:close(BadSock),
 
     %% And finally test with passive mode (which should work):
@@ -1392,7 +1394,9 @@ login_bad_pwd_no_retry(Config, AuthMethods) ->
 	    {fail, "Retry bad password"}
     after 0 ->
 	    case ConnRes of
-		{error,"Unable to connect using the available authentication methods"} ->
+		{error, Err} ->
+                    "Unable to connect using the available authentication methods" =
+                        ssh_error:description(Err),
 		    ssh:stop_daemon(DaemonRef),
 		    ok;
 		{ok,Conn} ->
@@ -1471,11 +1475,19 @@ setopts_getopts(Config) ->
 %%--------------------------------------------------------------------
 %% Due to timing the error message may or may not be delivered to
 %% the "tcp-application" before the socket closed message is received
-check_error("Invalid state") -> ok;
-check_error("Connection closed") -> ok;
-check_error("Selection of key exchange algorithm failed"++_) -> ok;
-check_error("No host key available") -> ok;
-check_error(Error) -> ct:fail(Error).
+check_error(Error) when is_tuple(Error) ->
+    ValidError = is_tuple(Error)
+        andalso check_error_str(ssh_error:description(Error)),
+    if ValidError -> ok;
+       true ->
+            ct:fail(Error)
+    end.
+
+check_error_str("Invalid state") -> true;
+check_error_str("Connection closed") -> true;
+check_error_str("Selection of key exchange algorithm failed"++_) -> true;
+check_error_str("No host key available") -> true;
+check_error_str(_) -> false.
 
 basic_test(Config) ->
     ClientOpts = proplists:get_value(client_opts, Config),
