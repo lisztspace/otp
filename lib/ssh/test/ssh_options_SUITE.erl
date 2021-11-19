@@ -258,14 +258,15 @@ server_password_option(Config) when is_list(Config) ->
 
     Reason = "Unable to connect using the available authentication methods",
     
-    {error, Reason} =
+    {error, {{rfc_code, Code}, _} = Err} =
 	ssh:connect(Host, Port, [{silently_accept_hosts, true},
                                  {save_accepted_host, false},
 				 {user, "vego"},
 				 {password, "foo"},
 				 {user_interaction, false},
 				 {user_dir, UserDir}]),
-    
+    Reason = ssh_error:description(Err),
+
     ct:log("Test of wrong password: Error msg: ~p ~n", [Reason]),
 
     ssh:close(ConnectionRef),
@@ -330,20 +331,22 @@ server_pwdfun_option(Config) ->
 
     Reason = "Unable to connect using the available authentication methods",
 
-    {error, Reason} =
+    {error, {{rfc_code, _}, _} = Err0} =
 	ssh:connect(Host, Port, [{silently_accept_hosts, true},
                                  {save_accepted_host, false},
 				 {user, "foo"},
 				 {password, "morot"},
 				 {user_interaction, false},
 				 {user_dir, UserDir}]),
-    {error, Reason} =
+    Reason = ssh_error:description(Err0),
+    {error, {{rfc_code, _}, _} = Err1} =
 	ssh:connect(Host, Port, [{silently_accept_hosts, true},
                                  {save_accepted_host, false},
 				 {user, "vego"},
 				 {password, "foo"},
 				 {user_interaction, false},
 				 {user_dir, UserDir}]),
+    Reason = ssh_error:description(Err1),
     ssh:stop_daemon(Pid).
 
 
@@ -378,34 +381,38 @@ server_pwdfun_4_option(Config) ->
 
     Reason = "Unable to connect using the available authentication methods",
 
-    {error, Reason} =
+    {error, {{rfc_code, _}, _} = Err0} =
 	ssh:connect(Host, Port, [{silently_accept_hosts, true},
                                  {save_accepted_host, false},
 				 {user, "foo"},
 				 {password, "morot"},
 				 {user_interaction, false},
 				 {user_dir, UserDir}]),
-    {error, Reason} =
+    Reason = ssh_error:description(Err0),
+    {error, {{rfc_code, _}, _} = Err1} =
 	ssh:connect(Host, Port, [{silently_accept_hosts, true},
                                  {save_accepted_host, false},
 				 {user, "fie"},
 				 {password, "morot"},
 				 {user_interaction, false},
 				 {user_dir, UserDir}]),
-    {error, Reason} =
+    Reason = ssh_error:description(Err1),
+    {error, {{rfc_code, _}, _} = Err2} =
 	ssh:connect(Host, Port, [{silently_accept_hosts, true},
 				 {user, "vego"},
 				 {password, "foo"},
 				 {user_interaction, false},
 				 {user_dir, UserDir}]),
+    Reason = ssh_error:description(Err2),
 
-    {error, Reason} =
+    {error, {{rfc_code, _}, _} = Err3} =
 	ssh:connect(Host, Port, [{silently_accept_hosts, true},
                                  {save_accepted_host, false},
 				 {user, "bandit"},
 				 {password, "pwd breaking"},
 				 {user_interaction, false},
 				 {user_dir, UserDir}]),
+    Reason = ssh_error:description(Err3),
     ssh:stop_daemon(Pid).
 
 
@@ -1110,7 +1117,7 @@ ssh_connect_arg4_timeout(_Config) ->
 
     %% Wait for client reaction on the connection try:
     receive
-	{done, Client, {error,timeout}, T0} ->
+	{done, Client, {error, {timeout, _}}, T0} ->
 	    Msp = ms_passed(T0),
 	    exit(Server,hasta_la_vista___baby),
 	    Low = 0.9*Timeout,
@@ -1486,7 +1493,8 @@ max_sessions(Config, ParallelLogin, Connect0) when is_function(Connect0,2) ->
 		    ssh:stop_daemon(Pid),
 		    {fail,"Too many connections accepted"}
 	    catch
-		error:{badmatch,{error,"Connection closed"}} ->
+                %% "Connection closed"
+		error:{badmatch,{error, {connection_closed, _}}} ->
                     ct:log("Step 2 ok: could not set up too many connections. Good.",[]),
 		    %% Now stop one connection and try to open one more
 		    ok = ssh:close(hd(Connections)),
@@ -1515,7 +1523,8 @@ try_to_connect(Connect, Host, Port, Pid, Tref, N) ->
 	     after 0 -> ok
 	     end
      catch
-	 error:{badmatch,{error,"Connection closed"}} ->
+         %% "Connection closed"
+	 error:{badmatch,{error, {connection_closed, _}}} ->
 	     %% Could not set up one more connection. Try again until timeout.
 	     receive
 		 timeout_no_connection ->
@@ -1823,7 +1832,9 @@ config_file_modify_algorithms_order(Config) ->
             {badrpc, {'EXIT', {{badmatch,ExpectedError}, _}}} =
                 %% No common kex algorithms expected.
                 rpc:call(Node, ssh_test_lib, std_connect, [Config, Host, Port, []]),
-            {error,"Key exchange failed"} = ExpectedError,
+            %% {error,"Key exchange failed"} = ExpectedError,
+            {error, Err} = ExpectedError,
+            "Key exchange failed" = ssh_error:description(Err),
 
             C = rpc:call(Node, ssh_test_lib, std_connect,
                          [Config, Host, Port, 
