@@ -27,5 +27,5 @@
 -callback error_description(ssh:error()) -> string().
 
 -spec description(ssh:error()) -> string().
-description(?ssh_error(_Details, Module) = Error) ->
+description(?ssh_error(_Details, Module, _Line) = Error) ->
     Module:error_description(Error).

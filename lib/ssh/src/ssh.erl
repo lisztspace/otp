@@ -1045,7 +1045,7 @@ ssh_dbg_format(tcp, {return_from, {?MODULE,transport_connect,4}, Result},
      ],
      Stack}.
 
-error_description(?ssh_error(Details)) ->
+error_description(?ssh_error(Details, _, _)) ->
     description(Details).
 
 description(Details) ->

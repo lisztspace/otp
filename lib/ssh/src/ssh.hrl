@@ -556,13 +556,16 @@
        ).
 
 %% Error handling
--record(error_meta, {module = ?MODULE :: module()}).
+-record(error_meta, {module = ?MODULE :: module(), line = ?LINE :: pos_integer()}).
 
 -define(META(Module), #error_meta{module = Module}).
 
+-define(ssh_error(Details, Module, Line),
+        {Details, #error_meta{module = Module, line = Line}}).
 -define(ssh_error(Details, Module),
-        {Details, #error_meta{module = Module}}).
--define(ssh_error(Details), ?ssh_error(Details, ?MODULE)).
+        ?ssh_error(Details, Module, ?LINE)).
+-define(ssh_error(Details), ?ssh_error(Details, ?MODULE, ?LINE)).
+-define(ssh_error_details(Details), {Details, #error_meta{}}).
 
 -define(FMT(FStr, Args), lists:flatten(io_lib:format(FStr, Args))).
 
