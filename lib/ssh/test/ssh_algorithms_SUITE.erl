@@ -362,7 +362,9 @@ try_exec_simple_group(Group, Config) ->
     of
 	_ -> ct:fail("Exec though no group available")
     catch
-        error:{badmatch,{error,"Key exchange failed"}} -> ok
+        %% FIXME use name instead of explicit constant?
+        %% "Key exchange failed"
+        error:{badmatch, {error, {{rfc_code, 3}, _}}} -> ok
     end.
 
 %%--------------------------------------------------------------------
