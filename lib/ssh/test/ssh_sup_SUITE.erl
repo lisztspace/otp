@@ -275,8 +275,10 @@ killed_acceptor_restarts(Config) ->
     
     ok = ssh:stop_daemon(DaemonPid),
     ?wait_match(undefined, process_info(DaemonPid), 1000, 30),
-    ?wait_match({error,closed}, ssh:connection_info(C1,[client_version]), 1000, 5),
-    ?wait_match({error,closed}, ssh:connection_info(C2,[client_version]), 1000, 5).
+    ?wait_match({error, {closed, _}},
+                ssh:connection_info(C1,[client_version]), 1000, 5),
+    ?wait_match({error, {closed, _}},
+                ssh:connection_info(C2,[client_version]), 1000, 5).
 
 %%-------------------------------------------------------------------------
 shell_channel_tree(Config) ->
