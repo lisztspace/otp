@@ -146,7 +146,7 @@ takeover(ConnPid, _, Socket, Options) ->
 %% . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 stop(ConnectionHandler)->
     case call(ConnectionHandler, stop) of
-       {error, closed} ->
+       {error, {closed, _}} ->
 	    ok;
 	Other ->
 	    Other
@@ -367,10 +367,11 @@ set_sock_opts(ConnectionRef, SocketOptions) ->
         [] ->
             call(ConnectionRef, {set_sock_opts,SocketOptions});
         Bad ->
-            {error, {not_allowed,Bad}}
+            {error, ?ssh_error({not_allowed, Bad})}
     catch
         _:_ ->
-            {error, badarg}
+            %% FIXME Make this more informative, if possible.
+            {error, ?ssh_error(badarg)}
     end.
 
 prohibited_sock_option(active)    -> true;
@@ -2281,6 +2282,9 @@ description({rfc_code, Code}) ->
     default_text(Code);
 description(connection_closed) ->
     "Connection closed";
+description({not_allowed, Bad}) ->
+    %% FIXME Find a better message here.
+    ?FMT("Options '~p' not allwed.", [Bad]);
 description(closed) ->
     "Connection closed";
 description(timeout) ->
