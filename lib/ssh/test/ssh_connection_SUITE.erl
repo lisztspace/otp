@@ -580,11 +580,13 @@ send_after_exit(Config) when is_list(Config) ->
 	10000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
     end,
     case ssh_connection:send(ConnectionRef, ChannelId0, Data, 2000) of
-	{error, closed} -> ok;
+	{error, {closed, _} = Err} ->
+            true = is_list(ssh_error:description(Err)),
+            ok;
 	ok ->
-	    ct:fail({expected,{error,closed}, {got, ok}});
-	{error, timeout} ->
-	    ct:fail({expected,{error,closed}, {got, {error, timeout}}});
+	    ct:fail({expected, {error, {closed, "<meta data>"}}, {got, ok}});
+	{error, {timeout, _}} ->
+	    ct:fail({expected, {error,closed}, {got, {error, timeout}}});
 	Else ->
 	    ct:fail(Else)
     end.
@@ -739,16 +741,21 @@ do_interrupted_send(Config, SendSize, EchoSize) ->
 		    ssh:stop_daemon(Pid),
 		    ct:log("~p:~p Check sender", [?MODULE,?LINE]),
 		    receive
-			{SenderPid, {error, closed}} ->
-			    ct:log("~p:~p {error,closed} - That's what we expect :)",[?MODULE,?LINE]),
+			{SenderPid, {error, {closed, _} = Err}} ->
+                            true = is_list(ssh_error:description(Err)),
+			    ct:log("~p:~p ~p - That's what we expect :)",
+                                   [Err, ?MODULE, ?LINE]),
 			    ok;
 			Msg ->
-			    ct:log("~p:~p Not expected send result: ~p",[?MODULE,?LINE,Msg]),
+			    ct:log("~p:~p Not expected send result: ~p",
+                                   [?MODULE, ?LINE, Msg]),
 			    {fail, "Not expected msg"}
 		    end;
 
-		{SenderPid, {error, closed}} ->
-		    ct:log("~p:~p {error,closed} - That's what we expect, but client channel handler has not reported yet",[?MODULE,?LINE]),
+		{SenderPid, {error, {closed, _} = Err}} ->
+                    true = is_list(ssh_error:description(Err)),
+		    ct:log("~p:~p ~p - That's what we expect, but client channel handler has not reported yet",
+                           [Err, ?MODULE, ?LINE]),
 		    receive
 			{ResultPid, result, Result} ->
 			    ct:log("~p:~p Now got the result: ~p", [?MODULE,?LINE,Result]),
@@ -1432,7 +1439,8 @@ kex_error(Config) ->
                     ct:fail("timeout", [])
             end;
 
-        error:{badmatch,{error,_}} ->
+        error:{badmatch, {error, _} = Err1} ->
+            true = is_list(ssh_error:description(Err1)),
             ok = logger:remove_handler(kex_error),
             ct:fail("unexpected error msg", [])
     end.
@@ -1590,19 +1598,27 @@ start_subsystem_on_closed_channel(Config) ->
 
     {ok, ChannelId1} = ssh_connection:session_channel(ConnectionRef, infinity),
     ok = ssh_connection:close(ConnectionRef, ChannelId1),
-    {error, closed} = ssh_connection:ptty_alloc(ConnectionRef, ChannelId1, []),
-    {error, closed} = ssh_connection:subsystem(ConnectionRef, ChannelId1, "echo_n", 5000),
-    {error, closed} = ssh_connection:exec(ConnectionRef, ChannelId1, "testing1.\n", 5000),
-    {error, closed} = ssh_connection:send(ConnectionRef, ChannelId1, "exit().\n", 5000),
+    {error, {closed, _}} =
+        ssh_connection:ptty_alloc(ConnectionRef, ChannelId1, []),
+    {error, {closed, _}} =
+        ssh_connection:subsystem(ConnectionRef, ChannelId1, "echo_n", 5000),
+    {error, {closed, _}} =
+        ssh_connection:exec(ConnectionRef, ChannelId1, "testing1.\n", 5000),
+    {error, {closed, _}} =
+        ssh_connection:send(ConnectionRef, ChannelId1, "exit().\n", 5000),
 
     %% Test that there could be a gap between close and an operation (Bugfix OTP-14939):
     {ok, ChannelId2} = ssh_connection:session_channel(ConnectionRef, infinity),
     ok = ssh_connection:close(ConnectionRef, ChannelId2),
     timer:sleep(2000),
-    {error, closed} = ssh_connection:ptty_alloc(ConnectionRef, ChannelId2, []),
-    {error, closed} = ssh_connection:subsystem(ConnectionRef, ChannelId2, "echo_n", 5000),
-    {error, closed} = ssh_connection:exec(ConnectionRef, ChannelId2, "testing1.\n", 5000),
-    {error, closed} = ssh_connection:send(ConnectionRef, ChannelId2, "exit().\n", 5000),
+    {error, {closed, _}} =
+        ssh_connection:ptty_alloc(ConnectionRef, ChannelId2, []),
+    {error, {closed, _}} =
+        ssh_connection:subsystem(ConnectionRef, ChannelId2, "echo_n", 5000),
+    {error, {closed, _}} =
+        ssh_connection:exec(ConnectionRef, ChannelId2, "testing1.\n", 5000),
+    {error, {closed, _}} =
+        ssh_connection:send(ConnectionRef, ChannelId2, "exit().\n", 5000),
 
     ssh:close(ConnectionRef),
     ssh:stop_daemon(Pid).
