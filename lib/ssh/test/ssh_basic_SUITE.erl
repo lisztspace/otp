@@ -863,11 +863,14 @@ ssh_file_is_host_key_misc(Config) ->
     true = ssh_file:is_host_key(Key2, "h21",   22, 'ssh-ed448',   [{user_dir,Dir},
                                                                    {key_cb_private,[{optimize,space}]}]),
     %% Check revoked key:
-    {error,revoked_key} =
-        ssh_file:is_host_key(Key2, "h22",   22, 'ssh-ed448',   [{user_dir,Dir}]),
-    {error,revoked_key} =
-        ssh_file:is_host_key(Key2, "h22",   22, 'ssh-ed448',   [{user_dir,Dir},
-                                                                {key_cb_private,[{optimize,space}]}]),
+    {error, {revoked_key, _} = Err0} =
+        ssh_file:is_host_key(Key2, "h22",   22, 'ssh-ed448', [{user_dir,Dir}]),
+    true = is_list(ssh_error:description(Err0)),
+    {error, {revoked_key, _} = Err1} =
+        ssh_file:is_host_key(Key2, "h22",   22, 'ssh-ed448',
+                             [{user_dir,Dir},
+                              {key_cb_private,[{optimize,space}]}]),
+    true = is_list(ssh_error:description(Err1)),
     %% Check key with "!" in pattern:
     false= ssh_file:is_host_key(Key1, "h12",   22, 'ssh-ed25519', [{user_dir,Dir}]),
 
@@ -1459,9 +1462,10 @@ setopts_getopts(Config) ->
         ssh:get_sock_opts(ConnectionRef, [active, deliver, mode, packet]),
 
     %% Test to set forbidden opts
-    {error,{not_allowed,[active,deliver,mode,packet]}} =
+    {error, {{not_allowed,[active,deliver,mode,packet]}, _} = Err} =
         ssh:set_sock_opts(ConnectionRef, [{active,once},{deliver,term},{mode,binary},{packet,0}]),
-    
+    true = is_list(ssh_error:description(Err)),
+
     %% Test to set some other opt
     {ok,[{delay_send,DS0}]} =
         ssh:get_sock_opts(ConnectionRef, [delay_send]),
