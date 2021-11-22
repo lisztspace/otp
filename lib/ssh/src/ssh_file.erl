@@ -55,6 +55,10 @@
 
 -define(ENCODED_LINE_LENGTH, 68).
 
+%%%--------------------- error handling exports -------------------
+-behaviour(ssh_error).
+-export([error_description/1]).
+
 %%%--------------------- common exports ---------------------------
 -export_type([user_dir_common_option/0,
               user_dir_fun_common_option/0
@@ -567,7 +571,7 @@ lookup_host_keys(Hosts, KeyType, Key, File, Opts) ->
                         {true,RestLines} ->
                             case revoked_key(Hosts, KeyType, Key, RestLines) of
                                 true ->
-                                    {error,revoked_key};
+                                    {error, ?ssh_error(revoked_key)};
                                 false ->
                                     true
                             end;
@@ -597,7 +601,7 @@ lookup_host_keys(Hosts, KeyType, Key, File, Opts) ->
                                                     end)
                                 of
                                     true ->
-                                        {error,revoked_key};
+                                        {error, ?ssh_error(revoked_key)};
                                     false ->
                                         true
                                 end;
@@ -659,7 +663,7 @@ known_key_in_line(Hosts, KeyType, EncKey, FullLine=[Option | Rest]) ->
         true ->
             case Option of
                 <<"@revoked">> ->
-                    {error, revoked_key};
+                    {error, ?ssh_error(revoked_key)};
                 _ ->
                     %% No other options than @revoked handled (but the key matched)
                     false
@@ -1207,3 +1211,9 @@ skip_blank_lines_and_comments(Lines) ->
                          %% skip blank lines
                          re:run(L, "^(\t|\s)+$") == nomatch
                  end, Lines).
+
+error_description(?ssh_error(Details, _, _)) ->
+    description(Details).
+
+description(revoked_key) ->
+    "Key is revoked.".
