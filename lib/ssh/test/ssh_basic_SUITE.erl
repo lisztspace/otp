@@ -467,7 +467,9 @@ idle_time_common(DaemonExtraOpts, ClientExtraOpts, Config) ->
     ssh_sftp:stop_channel(Id5),
     receive
     after 10000 ->
-	    {error, closed} = ssh_connection:session_channel(ConnectionRef, 1000)
+	    {error, {closed, _} = Err} =
+                ssh_connection:session_channel(ConnectionRef, 1000),
+            true = is_list(ssh_error:description(Err))
     end,
     ssh:stop_daemon(Pid).
 
