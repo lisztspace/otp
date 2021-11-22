@@ -631,7 +631,7 @@ receive_wait(_N, S) ->
     S.
 
 %% random_padding_len(PaddingLen1, ChunkSize) ->
-%%     MaxAdditionalRandomPaddingLen = 		% max 255 bytes padding totaö
+%%     MaxAdditionalRandomPaddingLen = 		% max 255 bytes padding total
 %% 	(255 - PaddingLen1) - ((255 - PaddingLen1) rem ChunkSize),
 %%     AddLen0 = crypto:rand_uniform(0,MaxAdditionalRandomPaddingLen),
 %%     AddLen0 - (AddLen0 rem ChunkSize).		% preserve the blocking
