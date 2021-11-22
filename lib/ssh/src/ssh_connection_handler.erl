@@ -1532,20 +1532,22 @@ call(FsmPid, Event) ->
 call(FsmPid, Event, Timeout) ->
     try gen_statem:call(FsmPid, Event, Timeout) of
 	{closed, _R} ->
-	    {error, closed};
+	    {error, ?ssh_error(closed)};
 	{killed, _R} ->
-	    {error, closed};
-	Result ->
+	    {error, ?ssh_error(closed)};
+	{error, Reason} ->
+            {error, ?ssh_error(Reason)};
+        Result ->
 	    Result
     catch
 	exit:{noproc, _R} ->
-	    {error, closed};
+	    {error, ?ssh_error(closed)};
 	exit:{normal, _R} ->
-	    {error, closed};
+	    {error, ?ssh_error(closed)};
 	exit:{{shutdown, _R},_} ->
-	    {error, closed};
+	    {error, ?ssh_error(closed)};
 	exit:{shutdown, _R} ->
-	    {error, closed}
+	    {error, ?ssh_error(closed)}
     end.
 
 
@@ -2278,6 +2280,8 @@ error_description(?ssh_error(Details, _, _)) ->
 description({rfc_code, Code}) ->
     default_text(Code);
 description(connection_closed) ->
+    "Connection closed";
+description(closed) ->
     "Connection closed";
 description(timeout) ->
     "Timeout".
