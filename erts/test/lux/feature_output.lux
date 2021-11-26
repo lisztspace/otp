@@ -1,0 +1,39 @@
+[doc Testing of output when features have been enabled]
+
+[include features.luxinc]
+
+[invoke setup]
+
+[newshell compile]
+    !export ERLC_USE_SERVER=false
+    ?SH-PROMPT:
+    # This file has instances of -compile({enable_feature, ..}) inside
+    [invoke compile feature_directive_maybe_ifn.erl "--enable-feature=ifn_expr"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+
+[newshell erl]
+    !erl -pa $outdir
+    ?$ERLPROMPT
+
+    # Output should should know about the new reserved words during runtime
+
+    !features:enable_feature(maybe_expr).
+    ?ok
+    ?$ERLPROMPT
+
+    !feature_directive_maybe_ifn:foo().
+    ??[ifn,'maybe','else','if']
+    ?$ERLPROMPT
+
+    !features:enable_feature(ifn_expr).
+    ?ok
+    ?$ERLPROMPT
+
+    !feature_directive_maybe_ifn:foo().
+    ??['ifn','maybe','else','if']
+    ?$ERLPROMPT
+
+[cleanup]
+    !rm -fr $outdir
