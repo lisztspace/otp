@@ -24,12 +24,16 @@
          resword_add_feature/2,
          resword_add_features/2,
          resword_remove_feature/2,
-         resword_remove_features/2]).
+         resword_remove_features/2,
+         format_error/1]).
 
 %% Currently know features
 -spec features() -> [atom()].
 features() ->
     [ifn_expr, maybe_expr].
+
+is_valid_feature(Ftr) ->
+    lists:member(Ftr, features()).
 
 %% New reserved words for a feature.  The current set is just for
 %% tests and development.
@@ -44,16 +48,21 @@ reserved_words(maybe_expr) ->
           fun((atom()) ->
                      boolean()).
 resword_add_feature(Feature, F) ->
+    case is_valid_feature(Feature) of
+        true ->
+            {ok, add_feature(Feature, F)};
+        false ->
+            {error, {?MODULE, {invalid_features, [Feature]}}}
+    end.
+
+add_feature(Feature, F) ->
     Words = reserved_words(Feature),
     fun(Word) ->
             lists:member(Word, Words)
                 orelse F(Word)
     end.
 
--spec resword_remove_feature(atom(), fun((atom()) -> boolean())) ->
-          fun((atom()) ->
-                     boolean()).
-resword_remove_feature(Feature, F) ->
+remove_feature(Feature, F) ->
     Words = reserved_words(Feature),
     fun(Word) ->
             case lists:member(Word, Words) of
@@ -62,14 +71,47 @@ resword_remove_feature(Feature, F) ->
             end
     end.
 
+-spec resword_remove_feature(atom(), fun((atom()) -> boolean())) ->
+          fun((atom()) ->
+                     boolean()).
+resword_remove_feature(Feature, F) ->
+    case is_valid_feature(Feature) of
+        true ->
+            {ok, remove_feature(Feature, F)};
+        false ->
+            {error, {?MODULE, {invalid_features, [Feature]}}}
+    end.
+
 -spec resword_add_features([atom()], fun((atom()) -> boolean())) ->
           fun((atom()) ->
                      boolean()).
 resword_add_features(Features, F) ->
-    lists:foldl(fun resword_add_feature/2, F, Features).
+    case lists:all(fun is_valid_feature/1, Features) of
+        true ->
+            {ok, lists:foldl(fun add_feature/2, F, Features)};
+        false ->
+            IsInvalid = fun(Ftr) -> not is_valid_feature(Ftr) end,
+            Invalid = lists:filter(IsInvalid, Features),
+            {error, {?MODULE, {invalid_features, Invalid}}}
+    end.
 
 -spec resword_remove_features([atom()], fun((atom()) -> boolean())) ->
           fun((atom()) ->
                      boolean()).
 resword_remove_features(Features, F) ->
-    lists:foldl(fun resword_remove_feature/2, F, Features).
+    case lists:all(fun is_valid_feature/1, Features) of
+        true ->
+            {ok, lists:foldl(fun remove_feature/2, F, Features)};
+        false ->
+            IsInvalid = fun(Ftr) -> not is_valid_feature(Ftr) end,
+            Invalid = lists:filter(IsInvalid, Features),
+            {error, {?MODULE, {invalid_features, Invalid}}}
+    end.
+
+format_error({invalid_features, Ftrs}) ->
+    case Ftrs of
+        [Ftr] ->
+            io_lib:fwrite("the feature ~p does not exist.", [Ftr]);
+        Ftrs ->
+            io_lib:fwrite("the features ~p do not exist.", [Ftrs])
+    end.

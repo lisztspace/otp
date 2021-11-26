@@ -1018,43 +1018,65 @@ do_parse_module(DefEncoding, #compile{ifile=File,options=Opts,dir=Dir}=St) ->
                         false ->
                             1
                     end,
-    {Features, ResWordFun} = make_reserved_word_fun(Opts),
-    R = epp:parse_file(File,
-                       [{includes,[".",Dir|inc_paths(Opts)]},
-                        {source_name, SourceName},
-                        {macros,pre_defs(Opts)},
-                        {default_encoding,DefEncoding},
-                        {location,StartLocation},
-                        {reserved_word_fun, ResWordFun},
-                        {features, Features},
-                        extra]),
-    case R of
-	{ok,Forms0,Extra} ->
-	    Encoding = proplists:get_value(encoding, Extra),
-            Forms = case with_columns(Opts ++ compile_options(Forms0)) of
-                        true ->
-                            Forms0;
-                        false ->
-                            strip_columns(Forms0)
-                    end,
-            {ok,Forms,St#compile{encoding=Encoding}};
-	{error,E} ->
-	    Es = [{St#compile.ifile,[{none,?MODULE,{epp,E}}]}],
-	    {error,St#compile{errors=St#compile.errors ++ Es}}
+    case make_reserved_word_fun(Opts) of
+        {ok, {Features, ResWordFun}} ->
+            R = epp:parse_file(File,
+                               [{includes,[".",Dir|inc_paths(Opts)]},
+                                {source_name, SourceName},
+                                {macros,pre_defs(Opts)},
+                                {default_encoding,DefEncoding},
+                                {location,StartLocation},
+                                {reserved_word_fun, ResWordFun},
+                                {features, Features},
+                                extra]),
+            case R of
+                {ok,Forms0,Extra} ->
+                    Encoding = proplists:get_value(encoding, Extra),
+                    Forms = case with_columns(Opts ++ compile_options(Forms0)) of
+                                true ->
+                                    Forms0;
+                                false ->
+                                    strip_columns(Forms0)
+                            end,
+                    {ok,Forms,St#compile{encoding=Encoding}};
+                {error,E} ->
+                    Es = [{St#compile.ifile,[{none,?MODULE,{epp,E}}]}],
+                    {error,St#compile{errors=St#compile.errors ++ Es}}
+            end;
+        {error, {Mod, Reason}} ->
+            Es = [{St#compile.ifile,[{none, Mod, Reason}]}],
+            {error, St#compile{errors = St#compile.errors ++ Es}}
     end.
 
 %% Returns list of enabled features and a new reserved words function
 make_reserved_word_fun(Opts) ->
-    Features = lists:filtermap(fun({enable_feature, Ftr}) ->
-                                    {true, Ftr};
-                               (_) -> false
-                            end,
-                            Opts),
-    Fun =
-        features:resword_add_features(Features,
-                                      fun erl_scan:reserved_word/1),
-    {Features, Fun}.
+    AddFeatures = lists:filtermap(fun({enable_feature, Ftr}) ->
+                                          {true, Ftr};
+                                     (_) -> false
+                                  end,
+                                  Opts),
+    DelFeatures = lists:filtermap(fun({disable_feature, Ftr}) ->
+                                          {true, Ftr};
+                                     (_) -> false
+                                  end,
+                                  Opts),
+    %% FIXME check that all features are known at this stage so we
+    %% don't miss out on reporting any unknown features.
 
+    case features:resword_add_features(AddFeatures,
+                                       fun erl_scan:f_reserved_word/1) of
+        {ok, Fun} ->
+            case features:resword_remove_features(DelFeatures, Fun) of
+                {ok, FunX} ->
+                    {ok, {AddFeatures -- DelFeatures, FunX}};
+                {error, _} = Error ->
+                    %% FIXME We are missing potential incorrect
+                    %% features being disabled
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end.
 
 with_columns(Opts) ->
     case proplists:get_value(error_location, Opts, column) of

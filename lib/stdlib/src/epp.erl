@@ -743,14 +743,19 @@ wait_request(St) ->
             wait_request(St1);
         {disable_feature, Feature} ->
             Features = St#epp.features,
-            St1 = case lists:member(Feature, Features) of
-                      false ->
-                          %% Feature not enabled - warn?
-                          St;
-                      true ->
-                          put(disable_feature, Feature),
-                          St#epp{features = Features -- [Feature]}
-                  end,
+            %% Skip this check for now, but the check should probably
+            %% be done somewhere.
+            %% FIXME see above
+            %% St1 = case lists:member(Feature, Features) of
+            %%           false ->
+            %%               %% Feature not enabled - warn?
+            %%               St;
+            %%           true ->
+            %%               put(disable_feature, Feature),
+            %%               St#epp{features = Features -- [Feature]}
+            %%       end,
+            put(disable_feature, Feature),
+            St1 = St#epp{features = Features -- [Feature]},
             wait_request(St1);
 	{epp_request,From,macro_defs} ->
 	    %% Return the old format to avoid any incompability issues.
@@ -884,36 +889,48 @@ leave_file(From, St) ->
 %% scan_toks(Tokens, From, EppState)
 
 scan_toks(From, St0) ->
-    St = update_features(St0),
-
-    #epp{file = File, location = Loc, erl_scan_opts = ScanOpts} = St,
-    case io:scan_erl_form(File, '', Loc, ScanOpts) of
-	{ok,Toks,Cl} ->
-	    scan_toks(Toks, From, St#epp{location=Cl});
-	{error,E,Cl} ->
-	    epp_reply(From, {error,E}),
-	    wait_req_scan(St#epp{location=Cl});
-	{eof,Cl} ->
-	    leave_file(From, St#epp{location=Cl});
-	{error,_E} ->
-            epp_reply(From, {error,{St#epp.location,epp,cannot_parse}}),
-	    leave_file(wait_request(St), St)	%This serious, just exit!
+    case update_features(St0) of
+        {ok, St} ->
+            #epp{file = File, location = Loc, erl_scan_opts = ScanOpts} = St,
+            case io:scan_erl_form(File, '', Loc, ScanOpts) of
+                {ok,Toks,Cl} ->
+                    scan_toks(Toks, From, St#epp{location=Cl});
+                {error,E,Cl} ->
+                    epp_reply(From, {error,E}),
+                    wait_req_scan(St#epp{location=Cl});
+                {eof,Cl} ->
+                    leave_file(From, St#epp{location=Cl});
+                {error,_E} ->
+                    epp_reply(From, {error,{St#epp.location,epp,cannot_parse}}),
+                    leave_file(wait_request(St), St)	%This serious, just exit!
+            end;
+        {error, {Mod, Reason}} ->
+            #epp{file = _File, location = Loc} = St0,
+            %% FIXME How do I get the location reported?
+            epp_reply(From, {error, {Loc, Mod, Reason}}),
+            wait_req_scan(St0)
     end.
 
 update_features(St0) ->
-    St1 = update_features(St0,
+    case update_features(St0,
                           enable_feature,
                           fun features:resword_add_feature/2,
-                          fun(F, Fs) -> [F| Fs] end),
-    update_features(St1,
-                    disable_feature,
-                    fun features:resword_remove_feature/2,
-                    fun(F, Fs) -> Fs -- [F] end).
+                          fun(F, Fs) -> [F| Fs] end) of
+        {ok, St1} ->
+            update_features(St1,
+                            disable_feature,
+                            fun features:resword_remove_feature/2,
+                            fun(F, Fs) -> Fs -- [F] end);
+        {error, _Reason} = Error ->
+            %% FIXME We might fail to report a potential error of a
+            %% disabled feature
+            Error
+    end.
 
 update_features(St0, Ind, NewFun, NewFtrs) ->
     case get(Ind) of
         undefined ->
-            St0;
+            {ok, St0};
         Feature ->
             Macs0 = St0#epp.macs,
             Ftrs0 = St0#epp.features,
@@ -926,17 +943,22 @@ update_features(St0, Ind, NewFun, NewFtrs) ->
                     undefined -> fun erl_scan:reserved_word/1;
                     Fun -> Fun
                 end,
-            ResWordFun1 = NewFun(Feature, ResWordFun),
-            %% FIXME WE need to keep any other scan_opts present.
-            %% Right now, there are no other, but that might
-            %% change.
-            StX = St0#epp{erl_scan_opts =
-                              [{reserved_word_fun, ResWordFun1}],
-                          features = Ftrs1,
-                          else_reserved = ResWordFun1('else'),
-                          macs = Macs1},
-            put(Ind, undefined),
-            StX
+            case NewFun(Feature, ResWordFun) of
+                {ok, ResWordFun1} ->
+                    %% FIXME WE need to keep any other scan_opts
+                    %% present.  Right now, there are no other, but
+                    %% that might change.
+                    StX = St0#epp{erl_scan_opts =
+                                      [{reserved_word_fun, ResWordFun1}],
+                                  features = Ftrs1,
+                                  else_reserved = ResWordFun1('else'),
+                                  macs = Macs1},
+                    put(Ind, undefined),
+                    {ok, StX};
+                {error, _Reason} = Error ->
+                    put(Ind, undefined),
+                    Error
+            end
     end.
 
 scan_toks([{'-',_Lh},{atom,_Ld,define}=Define|Toks], From, St) ->
