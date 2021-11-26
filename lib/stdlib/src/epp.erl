@@ -619,7 +619,7 @@ init_server(Pid, FileName, Options, St0) ->
                     proplists:get_value(includes, Options, [])],
             ResWordFun =
                 proplists:get_value(reserved_word_fun, Options,
-                                    fun erl_scan:reserved_word/1),
+                                    fun erl_scan:f_reserved_word/1),
             %% the default location is 1 for backwards compatibility, not {1,1}
             AtLocation = proplists:get_value(location, Options, 1),
 
@@ -940,7 +940,7 @@ update_features(St0, Ind, NewFun, NewFtrs) ->
             ScanOptsX = St0#epp.erl_scan_opts,
             ResWordFun =
                 case proplists:get_value(reserved_word_fun, ScanOptsX) of
-                    undefined -> fun erl_scan:reserved_word/1;
+                    undefined -> fun erl_scan:f_reserved_word/1;
                     Fun -> Fun
                 end,
             case NewFun(Feature, ResWordFun) of

@@ -20,12 +20,17 @@
 -module(features).
 
 -export([features/0,
+         reserved_words/0,
          reserved_words/1,
          resword_add_feature/2,
          resword_add_features/2,
          resword_remove_feature/2,
          resword_remove_features/2,
+         enable_feature/1,
+         disable_feature/1,
          format_error/1]).
+
+-on_load(init_features/0).
 
 %% Currently know features
 -spec features() -> [atom()].
@@ -115,3 +120,42 @@ format_error({invalid_features, Ftrs}) ->
         Ftrs ->
             io_lib:fwrite("the features ~p do not exist.", [Ftrs])
     end.
+
+%% Hold the state of which features are currently enabled.
+%% This is almost static, so we go for an almost permanent state,
+%% i.e., use persistent_term.
+init_features() ->
+    persistent_term:put(enabled_features, []),
+    persistent_term:put(reserved_words, []),
+    ok.
+
+enable_feature(Feature) ->
+    Features = persistent_term:get(enabled_features),
+    case lists:member(Feature, Features) of
+        true ->
+            %% already there, maybe raise an error
+            ok;
+        false ->
+            persistent_term:put(enabled_features, [Feature| Features]),
+            Res = persistent_term:get(reserved_words),
+            New = reserved_words(Feature),
+            persistent_term:put(reserved_words, New ++ Res),
+            ok
+    end.
+
+disable_feature(Feature) ->
+    Features = persistent_term:get(enabled_features),
+    case lists:member(Feature, Features) of
+        true ->
+            persistent_term:put(enabled_features, Features -- [Feature]),
+            Res = persistent_term:get(reserved_words),
+            Rem = reserved_words(Feature),
+            persistent_term:put(enabled_features, Res -- Rem),
+            ok;
+        false ->
+            %% Not there, possibly raise an error
+            ok
+    end.
+
+reserved_words() ->
+    persistent_term:get(reserved_words).
