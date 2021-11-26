@@ -75,6 +75,7 @@
               pre_opened = false :: boolean(),
               erl_scan_opts = [] :: [_],
               features = [] :: [atom()],
+              else_reserved = false :: boolean(),
               fname = [] :: function_name_type()
 	     }).
 
@@ -621,12 +622,14 @@ init_server(Pid, FileName, Options, St0) ->
                                     fun erl_scan:reserved_word/1),
             %% the default location is 1 for backwards compatibility, not {1,1}
             AtLocation = proplists:get_value(location, Options, 1),
+
             St = St0#epp{delta=0, name=SourceName, name2=SourceName,
 			 path=Path, location=AtLocation, macs=Ms1,
 			 default_encoding=DefEncoding,
                          erl_scan_opts =
                              [{reserved_word_fun, ResWordFun}],
-                         features = Features},
+                         features = Features,
+                         else_reserved = ResWordFun('else')},
             From = wait_request(St),
             Anno = erl_anno:new(AtLocation),
             enter_file_reply(From, file_name(SourceName), Anno,
@@ -729,7 +732,13 @@ wait_request(St) ->
                           St;
                       false ->
                           put(enable_feature, Feature),
-                          St#epp{features = [Feature| Features]}
+                          ResWords =
+                              lists:append(
+                                lists:map(fun features:reserved_words/1,
+                                          [Feature| Features])),
+                          ElseReserved = lists:member('else', ResWords),
+                          St#epp{features = [Feature| Features],
+                                 else_reserved = ElseReserved}
                   end,
             wait_request(St1);
         {disable_feature, Feature} ->
@@ -924,6 +933,7 @@ update_features(St0, Ind, NewFun, NewFtrs) ->
             StX = St0#epp{erl_scan_opts =
                               [{reserved_word_fun, ResWordFun1}],
                           features = Ftrs1,
+                          else_reserved = ResWordFun1('else'),
                           macs = Macs1},
             put(Ind, undefined),
             StX
@@ -947,7 +957,9 @@ scan_toks([{'-',_Lh},{atom,_Li,ifndef}=IfnDef|Toks], From, St) ->
     scan_ifndef(Toks, IfnDef, From, St);
 scan_toks([{'-',_Lh},{atom,_Le,'else'}=Else|Toks], From, St) ->
     scan_else(Toks, Else, From, St);
-scan_toks([{'-',_Lh},{'else',_Le}=Else|Toks], From, St) ->
+%% conditionally allow else as a keyword
+scan_toks([{'-',_Lh},{'else',_Le}=Else|Toks], From, St)
+  when St#epp.else_reserved ->
     scan_else(Toks, Else, From, St);
 scan_toks([{'-',_Lh},{'if',_Le}=If|Toks], From, St) ->
     scan_if(Toks, If, From, St);
@@ -1432,6 +1444,7 @@ new_location(Ln, {Le,_}, {Lf,_}) ->
 %%  nested conditionals and repeated 'else's.
 
 skip_toks(From, St, [I|Sis]) ->
+    ElseReserved = St#epp.else_reserved,
     case io:scan_erl_form(St#epp.file, '', St#epp.location, St#epp.erl_scan_opts) of
 	{ok,[{'-',_Ah},{atom,_Ai,ifdef}|_Toks],Cl} ->
 	    skip_toks(From, St#epp{location=Cl}, [ifdef,I|Sis]);
@@ -1441,7 +1454,8 @@ skip_toks(From, St, [I|Sis]) ->
 	    skip_toks(From, St#epp{location=Cl}, ['if',I|Sis]);
 	{ok,[{'-',_Ah},{atom,_Ae,'else'}=Else|_Toks],Cl}->
 	    skip_else(Else, From, St#epp{location=Cl}, [I|Sis]);
-	{ok,[{'-',_Ah},{'else',_Ae}=Else|_Toks],Cl}->
+        %% conditionally allow else as reserved word
+	{ok,[{'-',_Ah},{'else',_Ae}=Else|_Toks],Cl} when ElseReserved ->
 	    skip_else(Else, From, St#epp{location=Cl}, [I|Sis]);
 	{ok,[{'-',_Ah},{atom,_Ae,'elif'}=Elif|Toks],Cl}->
 	    skip_elif(Toks, Elif, From, St#epp{location=Cl}, [I|Sis]);
