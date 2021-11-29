@@ -20,7 +20,7 @@
     # Output should should know about the new reserved words during runtime
 
     !features:enable_feature(maybe_expr).
-    ?ok
+    ??[maybe_expr]
     ?$ERLPROMPT
 
     !feature_directive_maybe_ifn:foo().
@@ -28,7 +28,7 @@
     ?$ERLPROMPT
 
     !features:enable_feature(ifn_expr).
-    ?ok
+    ?[ifn_expr,maybe_expr]
     ?$ERLPROMPT
 
     !feature_directive_maybe_ifn:foo().

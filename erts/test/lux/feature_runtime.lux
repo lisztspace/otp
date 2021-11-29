@@ -1,0 +1,75 @@
+[doc Test genreal working of runtime state of features]
+
+[include features.luxinc]
+
+[invoke setup]
+
+[newshell erl]
+    !erl
+    ?$ERLPROMPT
+
+    !features:enabled_features().
+    ??[]
+    ?$ERLPROMPT
+
+    !features:keywords().
+    ??[]
+    ?$ERLPROMPT
+
+    !features:enable_feature(maybe_expr).
+    ??[maybe_expr]
+    ?$ERLPROMPT
+
+    !features:keywords().
+    ??['maybe','else']
+    ?$ERLPROMPT
+
+    !features:disable_feature(maybe_expr).
+    ??[]
+    ?$ERLPROMPT
+
+    !features:keywords().
+    ??[]
+    ?$ERLPROMPT
+
+    !features:enable_feature(ifn_expr).
+    ??[ifn_expr]
+    ?$ERLPROMPT
+
+    !features:enable_feature(maybe_expr).
+    ??[maybe_expr,ifn_expr]
+    ?$ERLPROMPT
+
+    !features:enabled_features().
+    ??[maybe_expr,ifn_expr]
+    ?$ERLPROMPT
+
+    !features:keywords().
+    ??['maybe','else','ifn']
+
+    !features:disable_feature(ifn_expr).
+    ??[maybe_expr]
+    ?$ERLPROMPT
+
+    !features:enabled_features().
+    ??[maybe_expr]
+    ?$ERLPROMPT
+
+    !features:keywords().
+    ??['maybe','else']
+    ?$ERLPROMPT
+
+    !features:disable_feature(maybe_expr).
+    ??[]
+    ?$ERLPROMPT
+
+    !features:keywords().
+    ??[]
+    ?$ERLPROMPT
+
+    !features:enable_feature(misfeature).
+    ??invalid_feature
+    ??argument 1: unknown feature
+    ?$ERLPROMPT
+
+[cleanup]
