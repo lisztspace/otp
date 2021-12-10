@@ -20,6 +20,7 @@
 -module(features).
 
 -export([features/0,
+         feature_info/1,
          enabled_features/0,
          is_valid_feature/1,
          reserved_words/0,
@@ -33,8 +34,18 @@
          format_error/1,
          format_error/2]).
 
+-export([features_used/1]).
+
 -on_load(init_features/0).
 
+-type type() :: 'extension' | 'backwards_incompatible_change'.
+-type status() :: {'remove_planned'
+                   | 'inclusion_planned'
+                   | 'removed'
+                   | 'included'
+                   | 'experimental', release()}.
+-type release() :: {Major :: non_neg_integer(),
+                    Minor :: non_neg_integer()}.
 -type error() :: {?MODULE, {'invalid_features', [atom()]}}.
 
 -define(VALID_FEATURE(Feature),
@@ -54,6 +65,51 @@ features() ->
 
 is_valid_feature(Ftr) ->
     lists:member(Ftr, features()).
+
+-spec feature_info(atom()) -> FeatureInfoMap
+              when
+      Description :: string(),
+      FeatureInfoMap ::
+        #{description := Description,
+          type := type(),
+          status := status(),
+          %% List of additional compiler options to be given to
+          %% activate this feature.  Useful when there is a dependency
+          %% to other features.
+          %% FIXME Should this rather be named dependencies?
+          options := list()
+         }.
+feature_info(ifn_expr) ->
+    #{description =>
+          "Inclusion of expression `ifn cond -> body end`, which "
+      "evaluates `body` when cond is false.  This is a truly "
+      "experimental feature, present only to show and use the "
+      "support for experimental features.  Not extensively tested.  "
+      "Implementated by a transformation in the parser.",
+      status => {experimental, {24, 2}},
+      type => extension,
+      options => []};
+feature_info(ifnot_expr) ->
+    #{description =>
+          "Inclusion of expression `ifnot cond -> body end`, which "
+      "evaluates `body` when cond is false.  This is a truly "
+      "experimental feature, present only to show and use the "
+      "support for experimental features.  Not extensively tested.  "
+      "Similar to ifn_expr, but with a deeper implementation.",
+      status => {experimental, {24, 2}},
+      type => extension,
+      options => []};
+feature_info(maybe_expr) ->
+    #{description =>
+          "Implementation of the maybe expression proposed in EEP49 -- "
+      "Value based error handling.",
+      status => {experimental, {25, 0}},
+      type => extension,
+      options => []};
+feature_info(Ftr) ->
+    ?VALID_FEATURE(Ftr).
+
+
 
 %% New reserved words for a feature.  The current set is just for
 %% tests and development.
@@ -149,6 +205,23 @@ format_error({invalid_features, Ftrs}) ->
 init_features() ->
     persistent_term:put(enabled_features, []),
     persistent_term:put(reserved_words, []),
+    case init:get_argument('enable-feature') of
+        error ->
+            %% no features enabled
+            ok;
+        {ok, Ftrs} ->
+            %% FIXME Need to be paranoid about any failures here.
+            %% Only convert to an existing atom.  This will also catch
+            %% a too long atom.
+            F = fun(String) ->
+                        case catch list_to_existing_atom(String) of
+                            {'EXIT', _} -> false;
+                            Atom -> {is_valid_feature(Atom), Atom}
+                        end
+                end,
+            lists:foreach(fun enable_feature/1,
+                          lists:filtermap(F, lists:append(Ftrs)))
+    end,
     ok.
 
 enable_feature(Feature) ->
@@ -190,3 +263,15 @@ enabled_features() ->
 
 reserved_words() ->
     persistent_term:get(reserved_words).
+
+%% Temporary?
+features_used(Module) ->
+    case code:is_loaded(Module) of
+        false ->
+            not_loaded;
+        {file, FileName} ->
+            {ok, {_, [{_, Meta}]}} =
+                beam_lib:chunks(FileName, ["Meta"]),
+            MetaData = erlang:binary_to_term(Meta),
+            proplists:get_value(enabled_features, MetaData, [])
+    end.
