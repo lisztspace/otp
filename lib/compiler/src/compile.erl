@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1996-2021. All Rights Reserved.
+%% Copyright Ericsson AB 1996-2022. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -1030,15 +1030,21 @@ do_parse_module(DefEncoding, #compile{ifile=File,options=Opts,dir=Dir}=St) ->
                                 {features, Features},
                                 extra]),
             case R of
+                %% FIXME Extra should include used features as well
                 {ok,Forms0,Extra} ->
                     Encoding = proplists:get_value(encoding, Extra),
+                    %% Get features used in the module, indicated by
+                    %% enabling features with
+                    %% -compile({enable_feature, ..}).
+                    UsedFtrs = proplists:get_value(features, Extra),
+                    St1 = metadata_add_features(Features ++ UsedFtrs, St),
                     Forms = case with_columns(Opts ++ compile_options(Forms0)) of
                                 true ->
                                     Forms0;
                                 false ->
                                     strip_columns(Forms0)
                             end,
-                    {ok,Forms,St#compile{encoding=Encoding}};
+                    {ok,Forms,St1#compile{encoding=Encoding}};
                 {error,E} ->
                     Es = [{St#compile.ifile,[{none,?MODULE,{epp,E}}]}],
                     {error,St#compile{errors=St#compile.errors ++ Es}}
@@ -1047,6 +1053,29 @@ do_parse_module(DefEncoding, #compile{ifile=File,options=Opts,dir=Dir}=St) ->
             Es = [{St#compile.ifile,[{none, Mod, Reason}]}],
             {error, St#compile{errors = St#compile.errors ++ Es}}
     end.
+
+%% The atom to be used in the proplist of the meta chunk indicating
+%% the features used when compiling the module.
+-define(META_USED_FEATURES, enabled_features).
+-define(META_CHUNK_NAME, <<"Meta">>).
+
+metadata_add_features(Ftrs, #compile{extra_chunks = Extra} = St) ->
+    MetaData =
+        case proplists:get_value(?META_CHUNK_NAME, Extra) of
+            undefined ->
+                [];
+            Bin ->
+                erlang:binary_to_term(Bin)
+        end,
+    OldFtrs = proplists:get_value(?META_USED_FEATURES, MetaData, []),
+    NewFtrs = (Ftrs -- OldFtrs) ++ OldFtrs,
+    MetaData1 =
+        proplists:from_map(maps:put(?META_USED_FEATURES, NewFtrs,
+                                    proplists:to_map(MetaData))),
+    Extra1 = proplists:from_map(maps:put(?META_CHUNK_NAME,
+                                         erlang:term_to_binary(MetaData1),
+                                         proplists:to_map(Extra))),
+    St#compile{extra_chunks = Extra1}.
 
 %% Returns list of enabled features and a new reserved words function
 make_reserved_word_fun(Opts) ->

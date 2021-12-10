@@ -1163,7 +1163,7 @@ load_file_1(Mod, From, St) ->
 	error ->
 	    {reply,{error,nofile},St};
 	{Mod,Binary,File} ->
-	    try_load_module_1(File, Mod, Binary, From, St)
+            try_load_module_1(File, Mod, Binary, From, St)
     end.
 
 get_object_code(#state{path=Path}, Mod) when is_atom(Mod) ->

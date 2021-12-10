@@ -316,11 +316,18 @@ parse_file(Ifile, Options) ->
 	{ok,Epp} ->
 	    Forms = parse_file(Epp),
 	    close(Epp),
-	    {ok,Forms};
+            Epp ! {get_features,self()},
+                Ftrs = receive X -> X end,
+	    {ok,Forms, [{features, Ftrs}]};
 	{ok,Epp,Extra} ->
 	    Forms = parse_file(Epp),
+            Epp ! {get_features,self()},
+                Ftrs = receive X -> X end,
 	    close(Epp),
-	    {ok,Forms,Extra};
+            %% Return only *new* features, i.e., those added by
+            %% compile directives
+            UsedFtrs = Ftrs -- proplists:get_value(features, Options, []),
+	    {ok,Forms,[{features, UsedFtrs} | Extra]};
 	{error,E} ->
 	    {error,E}
     end.
@@ -724,6 +731,9 @@ user_predef([], Ms) -> {ok,Ms}.
 wait_request(St) ->
     receive
 	{epp_request,From,scan_erl_form} -> From;
+        {get_features, From} ->
+            From ! St#epp.features,
+            wait_request(St);
         {enable_feature, Feature} ->
             Features = St#epp.features,
             St1 = case lists:member(Feature, Features) of
