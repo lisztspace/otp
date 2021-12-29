@@ -1,0 +1,190 @@
+##
+## %CopyrightBegin%
+##
+## Copyright Ericsson AB 2021-2021. All Rights Reserved.
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+## %CopyrightEnd%
+##
+
+[doc Tests of using enable_feature as an option to erlc]
+
+[include features.luxinc]
+
+[macro syntax-error expr]
+    ?syntax error before: $expr
+[endmacro]
+
+[invoke setup]
+
+[newshell cmds]
+    -Unknown option
+    # DO not user erlc server as it seems that under "sometimes" new
+    # servers are added and left lingering
+    !export ERLC_USE_SERVER=false
+    ?SH-PROMPT:
+    [invoke compile ignorant.erl ""]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile ignorant.erl "+'{enable_feature, ifn}'"]
+    ?the feature ifn does not exist
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile ignorant.erl "+'{enable_feature, maybe}'"]
+    ?the feature maybe does not exist
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile ignorant.erl "+'{enable_feature, ifn}' +'{enable_feature, maybe}'"]
+    ??the features [maybe,ifn] do not exist
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_ifn.erl ""]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile f_ifn.erl "--enable-feature=ifn"]
+    ?the feature ifn does not exist
+    [invoke notok]
+
+    [invoke compile f_ifn.erl "'+{enable_feature, maybe}'"]
+    ?the feature maybe does not exist
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_ifn.erl "--enable-feature=maybe"]
+    ?the feature maybe does not exist
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_ifn.erl "'+{enable_feature, maybe}' '+{enable_feature, ifn}'"]
+    # FIXME Fix order!
+    ??the features [ifn,maybe] do not exist
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_ifn.erl "--enable-feature=maybe --enable-feature=ifn"]
+    # FIXME Fix order!
+    ??the features [ifn,maybe] do not exist
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_maybe.erl ""]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile f_maybe.erl "'+{enable_feature, maybe}'"]
+    ?the feature maybe does not exist
+    [invoke notok]
+
+    [invoke compile f_maybe.erl "--enable-feature=maybe"]
+    ?the feature maybe does not exist
+    [invoke notok]
+
+    [invoke compile f_maybe.erl "'+{enable_feature, ifn}'"]
+    ?the feature ifn does not exist
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_maybe.erl "--enable-feature=ifn"]
+    ?the feature ifn does not exist
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_maybe.erl "'+{enable_feature, maybe}' '+{enable_feature, ifn}'"]
+    ??the features [ifn,maybe] do not exist
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_maybe.erl "--enable-feature=maybe --enable-feature=ifn"]
+    ??the features [ifn,maybe] do not exist
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_maybe_ifn.erl ""]
+    ?SH-PROMPT:
+    [invoke ok]
+
+
+    # This file has instances of -compile({enable_feature, ..}) inside
+    [invoke compile f_incorrect_directives.erl ""]
+    ?the feature ifn does not exist
+    ?the feature maybe does not exist
+    [invoke notok]
+
+[newshell erl]
+    !erl -pa $outdir
+    ?$ERLPROMPT
+    [invoke erl-compile ignorant.erl []]
+    ???{ok,ignorant}
+    ?$ERLPROMPT
+
+    [invoke erl-compile ignorant.erl [{enable_feature,ifn}]]
+    ?the feature ifn does not exist
+    ?error
+    ?$ERLPROMPT
+
+    [invoke erl-compile ignorant.erl [{enable_feature,ifn},{enable_feature,maybe}]]
+    ??the features [ifn,maybe] do not exist
+    ?error
+    ?$ERLPROMPT
+
+    [invoke erl-compile f_directives.erl []]
+    ???{ok,f_directives}
+    ?$ERLPROMPT
+
+[shell cmds]
+    [invoke compile f_macros.erl ""]
+    ?SH-PROMPT:
+    [invoke ok]
+
+[shell erl]
+    !l(f_macros).
+    ?{module,f_macros}
+    ?$ERLPROMPT
+
+    !f_macros:has_ifn().
+    ?true
+    ?$ERLPROMPT
+
+    !f_macros:has_hindly_milner().
+    ?false
+    ?$ERLPROMPT
+
+    !f_macros:uses_ifn().
+    ?false
+    ?$ERLPROMPT
+
+    !f_macros:uses_maybe().
+    ?false
+    ?$ERLPROMPT
+
+
+
+[shell cmds]
+    [invoke compile f_incorrect_disable.erl "--disable-feature=ifn"]
+    ?the feature ifn does not exist
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_incorrect_disable.erl ""]
+    ?the feature unless does not exist
+    ?SH-PROMPT:
+    [invoke notok]
+
+[cleanup]
+    !rm -fr $outdir

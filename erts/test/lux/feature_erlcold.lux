@@ -1,0 +1,151 @@
+# FIXME This is the old version of feature_erlc, possibily useful
+# for finding some errors that need to be caught and presented.
+[doc Tests of using enable_feature as an option to erlc]
+
+[include features.luxinc]
+
+[macro syntax-error expr]
+    ?syntax error before: $expr
+[endmacro]
+
+[invoke setup]
+
+[newshell cmds]
+    !export ERLC_USE_SERVER=false
+    ?SH-PROMPT:
+    [invoke compile feature_ignorant.erl ""]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile feature_ignorant.erl "+'{enable_feature, ifn_expr}'"]
+    ?syntax error before: ','
+    ?syntax error before: ifn
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_ignorant.erl "--enable-feature=ifn_expr"]
+    ?syntax error before: ','
+    ?syntax error before: ifn
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_ignorant.erl "+'{enable_feature, maybe_expr}'"]
+    ?syntax error before: maybe
+    ?syntax error before: maybe
+    ?syntax error before: else
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_ignorant.erl "--enable-feature=maybe_expr"]
+    ?syntax error before: maybe
+    ?syntax error before: maybe
+    ?syntax error before: else
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_ignorant.erl "+'{enable_feature, ifn_expr}' +'{enable_feature, maybe_expr}'"]
+    ?syntax error before: ','
+    ?syntax error before: maybe
+    ?syntax error before: else
+    ?syntax error before: ifn
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_ignorant.erl "--enable-feature=ifn_expr --enable-feature=maybe_expr"]
+    ?syntax error before: ','
+    ?syntax error before: maybe
+    ?syntax error before: else
+    ?syntax error before: ifn
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_ifn.erl ""]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile feature_ifn.erl "'+{enable_feature, ifn_expr}'"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile feature_ifn.erl "--enable-feature=ifn_expr"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile feature_ifn.erl "'+{enable_feature, maybe_expr}'"]
+    [invoke syntax-error maybe]
+    [invoke syntax-error else]
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_ifn.erl "--enable-feature=maybe_expr"]
+    [invoke syntax-error maybe]
+    [invoke syntax-error else]
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_ifn.erl "'+{enable_feature, maybe_expr}' '+{enable_feature, ifn_expr}'"]
+    [invoke syntax-error maybe]
+    [invoke syntax-error else]
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_ifn.erl "--enable-feature=maybe_expr --enable-feature=ifn_expr"]
+    [invoke syntax-error maybe]
+    [invoke syntax-error else]
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_maybe.erl ""]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile feature_maybe.erl "'+{enable_feature, maybe_expr}'"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile feature_maybe.erl "'+{enable_feature, ifn_expr}'"]
+    [invoke syntax-error ',']
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_maybe.erl "'+{enable_feature, maybe_expr}' '+{enable_feature, ifn_expr}'"]
+    [invoke syntax-error ',']
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_maybe_ifn.erl ""]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile feature_maybe_ifn.erl "'+{enable_feature, maybe_expr}'"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile feature_maybe_ifn.erl "'+{enable_feature, ifn_expr}'"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile feature_maybe_ifn.erl "'+{enable_feature, maybe_expr}' '+{enable_feature, ifn_expr}'"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    # This file has instances of -compile({enable_feature, ..}) inside
+    [invoke compile feature_directive_maybe_ifn.erl "--enable-feature=ifn_expr"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+[newshell erl]
+    !erl
+    ?$ERLPROMPT
+    [invoke erl-compile feature_ignorant.erl []]
+    ???{ok,feature_ignorant}
+    ?$ERLPROMPT
+
+    [invoke erl-compile feature_ignorant.erl [{enable_feature,ifn_expr}]]
+    ?syntax error before: ','
+    ?syntax error before: ifn
+    ?error
+    ?$ERLPROMPT
+
+[cleanup]
+    !rm -fr $outdir
