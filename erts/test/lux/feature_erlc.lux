@@ -29,6 +29,11 @@
 [invoke setup]
 
 [newshell cmds]
+    -Unknown option
+    # DO not user erlc server as it seems that under "sometimes" new
+    # servers are added and left lingering
+    !export ERLC_USE_SERVER=false
+    ?SH-PROMPT:
     [invoke compile ignorant.erl ""]
     ?SH-PROMPT:
     [invoke ok]
@@ -68,7 +73,19 @@
     ?SH-PROMPT:
     [invoke notok]
 
+    [invoke compile f_ifn.erl "--enable-feature=maybe_expr"]
+    [invoke syntax-error maybe]
+    [invoke syntax-error then]
+    ?SH-PROMPT:
+    [invoke notok]
+
     [invoke compile f_ifn.erl "'+{enable_feature, maybe_expr}' '+{enable_feature, ifn_expr}'"]
+    [invoke syntax-error maybe]
+    [invoke syntax-error then]
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_ifn.erl "--enable-feature=maybe_expr --enable-feature=ifn_expr"]
     [invoke syntax-error maybe]
     [invoke syntax-error then]
     ?SH-PROMPT:
@@ -82,12 +99,26 @@
     ?SH-PROMPT:
     [invoke ok]
 
+    [invoke compile f_maybe.erl "--enable-feature=maybe_expr"]
+    ?SH-PROMPT:
+    [invoke ok]
+
     [invoke compile f_maybe.erl "'+{enable_feature, ifn_expr}'"]
     [invoke syntax-error ifn]
     ?SH-PROMPT:
     [invoke notok]
 
+    [invoke compile f_maybe.erl "--enable-feature=ifn_expr"]
+    [invoke syntax-error ifn]
+    ?SH-PROMPT:
+    [invoke notok]
+
     [invoke compile f_maybe.erl "'+{enable_feature, maybe_expr}' '+{enable_feature, ifn_expr}'"]
+    [invoke syntax-error ifn]
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_maybe.erl "--enable-feature=maybe_expr --enable-feature=ifn_expr"]
     [invoke syntax-error ifn]
     ?SH-PROMPT:
     [invoke notok]
@@ -100,11 +131,33 @@
     ?SH-PROMPT:
     [invoke ok]
 
+    [invoke compile f_maybe_ifn.erl "--enable-feature=maybe_expr"]
+    ?SH-PROMPT:
+    [invoke ok]
+
     [invoke compile f_maybe_ifn.erl "'+{enable_feature, ifn_expr}'"]
     ?SH-PROMPT:
     [invoke ok]
 
+    [invoke compile f_maybe_ifn.erl "--enable-feature=ifn_expr"]
+    ?SH-PROMPT:
+    [invoke ok]
+
     [invoke compile f_maybe_ifn.erl "'+{enable_feature, maybe_expr}' '+{enable_feature, ifn_expr}'"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile f_maybe_ifn.erl "--enable-feature=maybe_expr --enable-feature=ifn_expr"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    # Long options
+    [invoke compile f_ifn.erl "--enable-feature=ifn_expr"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    # This file has instances of -compile({enable_feature, ..}) inside
+    [invoke compile f_directives.erl ""]
     ?SH-PROMPT:
     [invoke ok]
 
@@ -119,6 +172,18 @@
     ?syntax error before: ifn
     ?syntax error before: ifn
     ?error
+    ?$ERLPROMPT
+
+    [invoke erl-compile ignorant.erl [{enable_feature,ifn_expr},{enable_feature,maybe_expr}]]
+    ?syntax error before: ifn
+    ?syntax error before: maybe
+    ?syntax error before: then
+    ?syntax error before: ifn
+    ?error
+    ?$ERLPROMPT
+
+    [invoke erl-compile f_directives.erl []]
+    ???{ok,f_directives}
     ?$ERLPROMPT
 
 [cleanup]
