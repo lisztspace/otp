@@ -162,7 +162,7 @@
     [invoke ok]
 
 [newshell erl]
-    !erl
+    !erl -pa $outdir
     ?$ERLPROMPT
     [invoke erl-compile ignorant.erl []]
     ???{ok,ignorant}
@@ -184,6 +184,86 @@
 
     [invoke erl-compile f_directives.erl []]
     ???{ok,f_directives}
+    ?$ERLPROMPT
+
+[shell cmds]
+    [invoke compile f_macros.erl ""]
+    ?SH-PROMPT:
+    [invoke ok]
+
+[shell erl]
+    !l(f_macros).
+    ?{module,f_macros}
+    ?$ERLPROMPT
+
+    !f_macros:has_ifn().
+    ?true
+    ?$ERLPROMPT
+
+    !f_macros:has_hindly_milner().
+    ?false
+    ?$ERLPROMPT
+
+    !f_macros:uses_ifn().
+    ?false
+    ?$ERLPROMPT
+
+    !f_macros:uses_maybe().
+    ?false
+    ?$ERLPROMPT
+
+[shell cmds]
+    [invoke compile f_macros.erl "--enable-feature=ifn_expr"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+[shell erl]
+    !l(f_macros).
+    ?{module,f_macros}
+    ?$ERLPROMPT
+
+    !f_macros:uses_ifn().
+    ?true
+    ?$ERLPROMPT
+
+    !f_macros:uses_maybe().
+    ?false
+    ?$ERLPROMPT
+
+[shell cmds]
+    [invoke compile f_macros.erl "--enable-feature=maybe_expr"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+[shell erl]
+    !l(f_macros).
+    ?{module,f_macros}
+    ?$ERLPROMPT
+
+    !f_macros:uses_ifn().
+    ?false
+    ?$ERLPROMPT
+
+    !f_macros:uses_maybe().
+    ?true
+    ?$ERLPROMPT
+
+[shell cmds]
+    [invoke compile f_macros.erl "--enable-feature=ifn_expr --enable-feature=maybe_expr"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+[shell erl]
+    !l(f_macros).
+    ?{module,f_macros}
+    ?$ERLPROMPT
+
+    !f_macros:uses_ifn().
+    ?true
+    ?$ERLPROMPT
+
+    !f_macros:uses_maybe().
+    ?true
     ?$ERLPROMPT
 
 [cleanup]
