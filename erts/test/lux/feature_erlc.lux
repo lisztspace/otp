@@ -186,6 +186,12 @@
     ???{ok,f_directives}
     ?$ERLPROMPT
 
+    # As we have not enabled any features, this load should not be
+    # allowed (if we have inserted the features used in the meta chunk).
+    !l(f_directives).
+    ??{error,not_allowed}
+    ?$ERLPROMPT
+
 [shell cmds]
     [invoke compile f_macros.erl ""]
     ?SH-PROMPT:
@@ -219,6 +225,14 @@
 
 [shell erl]
     !l(f_macros).
+    ??{error,not_allowed}
+    ?$ERLPROMPT
+
+    !features:enable_feature(ifn_expr).
+    ??[ifn_expr]
+    ?$ERLPROMPT
+
+    !l(f_macros).
     ?{module,f_macros}
     ?$ERLPROMPT
 
@@ -230,12 +244,48 @@
     ?false
     ?$ERLPROMPT
 
+    [invoke quit-erl]
+
+    !rm -f $outdir/f_macros.beam
+    ?SH-PROMPT:
+
+    [invoke start-erl ""]
+
+    [invoke erl-compile f_macros.erl [{enable_feature,ifn_expr}]]
+    ???{ok,f_macros}
+    ?$ERLPROMPT
+
+    # This should be allowed as we have not enabled the feature in the
+    # runtime
+    !l(f_macros).
+    ??{error,not_allowed}
+    ?$ERLPROMPT
+
+    [invoke quit-erl]
+
+    [invoke start-erl "-enable-feature ifn_expr"]
+    !l(f_macros).
+    ??{module,f_macros}
+    ?$ERLPROMPT
+
+    [invoke quit-erl]
+
+    [invoke start-erl ""]
+
 [shell cmds]
     [invoke compile f_macros.erl "--enable-feature=maybe_expr"]
     ?SH-PROMPT:
     [invoke ok]
 
 [shell erl]
+    !features:enable_feature(ifn_expr).
+    ??[ifn_expr]
+    ?$ERLPROMPT
+
+    !features:enable_feature(maybe_expr).
+    ??[maybe_expr,ifn_expr]
+    ?$ERLPROMPT
+
     !l(f_macros).
     ?{module,f_macros}
     ?$ERLPROMPT
@@ -289,11 +339,11 @@
 [shell erl]
     !f_disable:no_ifn().
     # FIXME Should really be 'maybe' since it is enabled
-    ???[ifn,maybe,no_ifn]
+    ???['ifn','maybe',no_ifn]
     ?$ERLPROMPT
 
     !f_disable:no_ftrs().
-    ???[ifn,maybe,else,no_maybe]
+    ???['ifn','maybe','else',no_maybe]
     ?$ERLPROMPT
 
     !f_disable:do(5).

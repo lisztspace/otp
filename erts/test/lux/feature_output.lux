@@ -23,14 +23,24 @@
     ??[maybe_expr]
     ?$ERLPROMPT
 
+    !features:enable_feature(ifn_expr).
+    ??[ifn_expr,maybe_expr]
+    ?$ERLPROMPT
+
+    !l(feature_directive_maybe_ifn).
+    ??{module,feature_directive_maybe_ifn}
+    ?$ERLPROMPT
+
     !feature_directive_maybe_ifn:foo().
-    ??[ifn,'maybe','else','if']
+    ??['ifn','maybe','else','if']
     ?$ERLPROMPT
 
     !features:enable_feature(ifn_expr).
     ?[ifn_expr,maybe_expr]
     ?$ERLPROMPT
 
+    # FIXME not needed here anymore - we do it above to be able to
+    # load the module explicitly
     !feature_directive_maybe_ifn:foo().
     ??['ifn','maybe','else','if']
     ?$ERLPROMPT
