@@ -281,5 +281,25 @@
     ???!(0 > 0)
     ?$ERLPROMPT
 
+[shell cmds]
+    [invoke compile f_disable.erl "--enable-feature=ifn_expr --enable-feature=maybe_expr"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+[shell erl]
+    !f_disable:no_ifn().
+    # FIXME Should really be 'maybe' since it is enabled
+    ???[ifn,maybe,no_ifn]
+    ?$ERLPROMPT
+
+    !f_disable:no_ftrs().
+    ???[ifn,maybe,then,no_maybe]
+    ?$ERLPROMPT
+
+    !f_disable:do(5).
+    # FIXME Should really be 'maybe'
+    ?maybe
+    ?$ERLPROMPT
+
 [cleanup]
     !rm -fr $outdir
