@@ -1,0 +1,125 @@
+##
+## %CopyrightBegin%
+##
+## Copyright Ericsson AB 2021-2022. All Rights Reserved.
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+## %CopyrightEnd%
+##
+
+[doc Tests of using enable_feature as an option to erlc]
+
+[include features.luxinc]
+
+[macro syntax-error expr]
+    ?syntax error before: $expr
+[endmacro]
+
+[invoke setup]
+
+[newshell cmds]
+    [invoke compile ignorant.erl ""]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile ignorant.erl "+'{enable_feature, ifn_expr}'"]
+    ?syntax error before:
+    ?syntax error before: ifn
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile ignorant.erl "+'{enable_feature, maybe_expr}'"]
+    ?syntax error before: maybe
+    ?syntax error before: maybe
+    ?syntax error before: then
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile ignorant.erl "+'{enable_feature, ifn_expr}' +'{enable_feature, maybe_expr}'"]
+    ?syntax error before:
+    ?syntax error before: maybe
+    ?syntax error before: then
+    ?syntax error before: ifn
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_ifn.erl ""]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile f_ifn.erl "'+{enable_feature, ifn_expr}'"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile f_ifn.erl "'+{enable_feature, maybe_expr}'"]
+    [invoke syntax-error maybe]
+    [invoke syntax-error then]
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_ifn.erl "'+{enable_feature, maybe_expr}' '+{enable_feature, ifn_expr}'"]
+    [invoke syntax-error maybe]
+    [invoke syntax-error then]
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_maybe.erl ""]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile f_maybe.erl "'+{enable_feature, maybe_expr}'"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile f_maybe.erl "'+{enable_feature, ifn_expr}'"]
+    [invoke syntax-error ifn]
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_maybe.erl "'+{enable_feature, maybe_expr}' '+{enable_feature, ifn_expr}'"]
+    [invoke syntax-error ifn]
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_maybe_ifn.erl ""]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile f_maybe_ifn.erl "'+{enable_feature, maybe_expr}'"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile f_maybe_ifn.erl "'+{enable_feature, ifn_expr}'"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [invoke compile f_maybe_ifn.erl "'+{enable_feature, maybe_expr}' '+{enable_feature, ifn_expr}'"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+[newshell erl]
+    !erl
+    ?$ERLPROMPT
+    [invoke erl-compile ignorant.erl []]
+    ???{ok,ignorant}
+    ?$ERLPROMPT
+
+    [invoke erl-compile ignorant.erl [{enable_feature,ifn_expr}]]
+    ?syntax error before: ifn
+    ?syntax error before: ifn
+    ?error
+    ?$ERLPROMPT
+
+[cleanup]
+    !rm -fr $outdir
