@@ -1,7 +1,7 @@
 ##
 ## %CopyrightBegin%
 ##
-## Copyright Ericsson AB 2021-2021. All Rights Reserved.
+## Copyright Ericsson AB 2021-2022. All Rights Reserved.
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -39,17 +39,18 @@
     [invoke ok]
 
     [invoke compile ignorant.erl "+'{enable_feature, ifn}'"]
-    ?the feature ifn does not exist
+    ?the feature 'ifn' does not exist
     ?SH-PROMPT:
     [invoke notok]
 
     [invoke compile ignorant.erl "+'{enable_feature, maybe}'"]
-    ?the feature maybe does not exist
+    ?the feature 'maybe' does not exist
     ?SH-PROMPT:
     [invoke notok]
 
     [invoke compile ignorant.erl "+'{enable_feature, ifn}' +'{enable_feature, maybe}'"]
-    ??the features [maybe,ifn] do not exist
+    # FIXME these are in the wrong order
+    ??the features 'maybe' and 'ifn' do not exist
     ?SH-PROMPT:
     [invoke notok]
 
@@ -58,28 +59,28 @@
     [invoke ok]
 
     [invoke compile f_ifn.erl "--enable-feature=ifn"]
-    ?the feature ifn does not exist
+    ?the feature 'ifn' does not exist
     [invoke notok]
 
     [invoke compile f_ifn.erl "'+{enable_feature, maybe}'"]
-    ?the feature maybe does not exist
+    ?the feature 'maybe' does not exist
     ?SH-PROMPT:
     [invoke notok]
 
     [invoke compile f_ifn.erl "--enable-feature=maybe"]
-    ?the feature maybe does not exist
+    ?the feature 'maybe' does not exist
     ?SH-PROMPT:
     [invoke notok]
 
     [invoke compile f_ifn.erl "'+{enable_feature, maybe}' '+{enable_feature, ifn}'"]
     # FIXME Fix order!
-    ??the features [ifn,maybe] do not exist
+    ??the features 'ifn' and 'maybe' do not exist
     ?SH-PROMPT:
     [invoke notok]
 
     [invoke compile f_ifn.erl "--enable-feature=maybe --enable-feature=ifn"]
     # FIXME Fix order!
-    ??the features [ifn,maybe] do not exist
+    ??the features 'ifn' and 'maybe' do not exist
     ?SH-PROMPT:
     [invoke notok]
 
@@ -88,30 +89,37 @@
     [invoke ok]
 
     [invoke compile f_maybe.erl "'+{enable_feature, maybe}'"]
-    ?the feature maybe does not exist
+    ?the feature 'maybe' does not exist
     [invoke notok]
 
     [invoke compile f_maybe.erl "--enable-feature=maybe"]
-    ?the feature maybe does not exist
+    ?the feature 'maybe' does not exist
     [invoke notok]
 
     [invoke compile f_maybe.erl "'+{enable_feature, ifn}'"]
-    ?the feature ifn does not exist
+    ?the feature 'ifn' does not exist
     ?SH-PROMPT:
     [invoke notok]
 
     [invoke compile f_maybe.erl "--enable-feature=ifn"]
-    ?the feature ifn does not exist
+    ?the feature 'ifn' does not exist
     ?SH-PROMPT:
     [invoke notok]
 
     [invoke compile f_maybe.erl "'+{enable_feature, maybe}' '+{enable_feature, ifn}'"]
-    ??the features [ifn,maybe] do not exist
+    # FIXME fix order
+    ??the features 'ifn' and 'maybe' do not exist
     ?SH-PROMPT:
     [invoke notok]
 
     [invoke compile f_maybe.erl "--enable-feature=maybe --enable-feature=ifn"]
-    ??the features [ifn,maybe] do not exist
+    ??the features 'ifn' and 'maybe' do not exist
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_maybe.erl "--enable-feature=maybe --enable-feature=ifn --enable-feature=unless"]
+    # FIXME fix order
+    ??the features 'unless', 'ifn' and 'maybe' do not exist
     ?SH-PROMPT:
     [invoke notok]
 
@@ -122,8 +130,8 @@
 
     # This file has instances of -compile({enable_feature, ..}) inside
     [invoke compile f_incorrect_directives.erl ""]
-    ?the feature ifn does not exist
-    ?the feature maybe does not exist
+    ?the feature 'ifn' does not exist
+    ?the feature 'maybe' does not exist
     [invoke notok]
 
 [newshell erl]
@@ -134,12 +142,17 @@
     ?$ERLPROMPT
 
     [invoke erl-compile ignorant.erl [{enable_feature,ifn}]]
-    ?the feature ifn does not exist
+    ?the feature 'ifn' does not exist
     ?error
     ?$ERLPROMPT
 
     [invoke erl-compile ignorant.erl [{enable_feature,ifn},{enable_feature,maybe}]]
-    ??the features [ifn,maybe] do not exist
+    ??the features 'ifn' and 'maybe' do not exist
+    ?error
+    ?$ERLPROMPT
+
+    [invoke erl-compile ignorant.erl [{enable_feature,unless},{enable_feature,ifn},{enable_feature,maybe}]]
+    ??the features 'unless', 'ifn' and 'maybe' do not exist
     ?error
     ?$ERLPROMPT
 
@@ -177,12 +190,12 @@
 
 [shell cmds]
     [invoke compile f_incorrect_disable.erl "--disable-feature=ifn"]
-    ?the feature ifn does not exist
+    ?the feature 'ifn' does not exist
     ?SH-PROMPT:
     [invoke notok]
 
     [invoke compile f_incorrect_disable.erl ""]
-    ?the feature unless does not exist
+    ?the feature 'unless' does not exist
     ?SH-PROMPT:
     [invoke notok]
 
