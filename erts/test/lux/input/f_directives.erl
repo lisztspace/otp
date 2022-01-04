@@ -24,7 +24,8 @@
 -module(f_directives).
 
 -export([foo/0,
-	 bar/0
+	 bar/0,
+         baz/1
 	]).
 
 %% NOTE: We should quote the feature name due to it being the same as
@@ -40,3 +41,10 @@ foo() ->
 
 bar() ->
     ['else', 'maybe'].
+
+-compile({disable_feature, maybe_expr}).
+
+baz(0) ->
+    [maybe];
+baz(1) ->
+    [else].
