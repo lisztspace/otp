@@ -191,12 +191,18 @@ format_error(Reason, [{_M, _F, _Args, Info}| _St]) ->
     ErrorMap = maps:get(cause, ErrorInfo),
     ErrorMap#{reason => io_lib:format("~p: ~p", [?MODULE, Reason])}.
 
-format_error({invalid_features, Ftrs}) ->
-    case Ftrs of
+format_error({invalid_features, Features}) ->
+    Fmt = fun F([Ftr]) -> io_lib:fwrite("'~p'", [Ftr]);
+              F([Ftr1, Ftr2]) ->
+                  io_lib:fwrite("'~p' and '~p'", [Ftr1, Ftr2]);
+              F([Ftr| Ftrs]) ->
+                  io_lib:fwrite("'~p', ~s", [Ftr, F(Ftrs)])
+          end,
+    case Features of
         [Ftr] ->
-            io_lib:fwrite("the feature ~p does not exist.", [Ftr]);
+            io_lib:fwrite("the feature ~s does not exist.", [Fmt([Ftr])]);
         Ftrs ->
-            io_lib:fwrite("the features ~p do not exist.", [Ftrs])
+            io_lib:fwrite("the features ~s do not exist.", [Fmt(Ftrs)])
     end.
 
 %% Hold the state of which features are currently enabled.
