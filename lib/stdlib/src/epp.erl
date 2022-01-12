@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1996-2021. All Rights Reserved.
+%% Copyright Ericsson AB 1996-2022. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -742,13 +742,7 @@ wait_request(St) ->
                           St;
                       false ->
                           put(enable_feature, Feature),
-                          ResWords =
-                              lists:append(
-                                lists:map(fun features:reserved_words/1,
-                                          [Feature| Features])),
-                          ElseReserved = lists:member('else', ResWords),
-                          St#epp{features = [Feature| Features],
-                                 else_reserved = ElseReserved}
+                          St#epp{features = [Feature| Features]}
                   end,
             wait_request(St1);
         {disable_feature, Feature} ->
