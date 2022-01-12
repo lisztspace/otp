@@ -162,8 +162,7 @@
     [invoke ok]
 
 [newshell erl]
-    !erl -pa $outdir
-    ?$ERLPROMPT
+    [invoke start-erl ""]
     [invoke erl-compile ignorant.erl []]
     ???{ok,ignorant}
     ?$ERLPROMPT
@@ -207,6 +206,10 @@
     ?$ERLPROMPT
 
     !f_macros:has_hindly_milner().
+    ?false
+    ?$ERLPROMPT
+
+    !f_macros:with_hm().
     ?false
     ?$ERLPROMPT
 
@@ -350,6 +353,37 @@
     # FIXME Should really be 'maybe'
     ?maybe
     ?$ERLPROMPT
+
+[shell cmds]
+    [invoke compile ignorant.erl "+warn_keywords"]
+    # Note: not all messges are checked
+    ?atom 'maybe' is reserved in the experimental feature 'maybe_expr'
+    ?atom 'else' is reserved in the experimental feature 'maybe_expr'
+    ?atom 'ifn' is reserved in the experimental feature 'ifn_expr'
+    [invoke ok]
+
+    [invoke compile ignorant.erl "+warn_keywords -Werror"]
+    # Note: not all messges are checked
+    ?atom 'maybe' is reserved in the experimental feature 'maybe_expr'
+    ?atom 'else' is reserved in the experimental feature 'maybe_expr'
+    ?atom 'ifn' is reserved in the experimental feature 'ifn_expr'
+    [invoke notok]
+
+    # This file has a directive for keyword warnings
+    [invoke compile ignorant_directive.erl ""]
+    # Note: not all messges are checked
+    ?Warning: atom 'maybe' is reserved in the experimental feature 'maybe_expr'
+    ?Warning: atom 'else' is reserved in the experimental feature 'maybe_expr'
+    ?Warning: atom 'ifn' is reserved in the experimental feature 'ifn_expr'
+    [invoke ok]
+
+    # This file has a directive for keyword warnings
+    # NOTE: This behaviour is inconsistent with that of enabling features,
+    # where what is in the file takes precedence.
+    [invoke compile ignorant_directive.erl "+nowarn_keywords"]
+    # Expect no warning
+    -Warning
+    [invoke ok]
 
 [cleanup]
     !rm -fr $outdir

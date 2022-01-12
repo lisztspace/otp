@@ -131,7 +131,9 @@
     # This file has instances of -compile({enable_feature, ..}) inside
     [invoke compile f_incorrect_directives.erl ""]
     ?the feature 'ifn' does not exist
+    ?%.*[0-9]+\| -compile
     ?the feature 'maybe' does not exist
+    ?%.*[0-9]+\| -compile
     [invoke notok]
 
 [newshell erl]
@@ -196,6 +198,7 @@
 
     [invoke compile f_incorrect_disable.erl ""]
     ?the feature 'unless' does not exist
+    ?%.*[0-9]+\| -compile
     ?SH-PROMPT:
     [invoke notok]
 

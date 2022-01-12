@@ -18,48 +18,25 @@
 %% %CopyrightEnd%
 %%
 
--module(f_macros).
+%% This module is ignorant about any features and thus use 'ifn',
+%% 'maybe' and 'then' as ordinary atoms.
 
--export([has_ifn/0,
-	 has_hindly_milner/0,
-         with_hm/0,
-	 uses_ifn/0,
-	 uses_maybe/0
-	]).
+-module(ignorant_directive).
 
-%% This test feature exists
--if(?FEATURE_AVAILABLE(ifn_expr)).
-has_ifn() ->
+-compile(warn_keywords).
+
+-export([foo/0,
+         frob/1,
+         bar/0,
+         baz/1]).
+
+foo() ->
+    [ifn, while, until].
+
+frob(while) -> false.
+
+bar() ->
+    [until, while].
+
+baz(ifn) ->
     true.
--else.
-has_ifn() ->
-    false.
--endif.
-
-%% This feature will probably never exist :-(
--if(?FEATURE_AVAILABLE(hindley_milner)).
-has_hindly_milner() ->
-    true.
--else.
-has_hindly_milner() ->
-    false.
--endif.
-
-with_hm() ->
-    ?FEATURE_ENABLED(hindley_milner).
-
--if(?FEATURE_ENABLED(ifn_expr)).
-uses_ifn() ->
-    true.
--else.
-uses_ifn() ->
-    false.
--endif.
-
--if(?FEATURE_ENABLED(while_expr)).
-uses_maybe() ->
-    true.
--else.
-uses_maybe() ->
-    false.
--endif.
