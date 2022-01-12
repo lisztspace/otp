@@ -344,10 +344,10 @@ parse_file(Epp) ->
     case parse_erl_form(Epp) of
 	{ok,Form} ->
             case Form of
-                {attribute, _, compile, {enable_feature, Ftr}} ->
-                    Epp ! {enable_feature, Ftr};
-                {attribute, _, compile, {disable_feature, Ftr}} ->
-                    Epp ! {disable_feature, Ftr};
+                {attribute, Loc, compile, {enable_feature, Ftr}} ->
+                    Epp ! {enable_feature, {Ftr, Loc}};
+                {attribute, Loc, compile, {disable_feature, Ftr}} ->
+                    Epp ! {disable_feature, {Ftr, Loc}};
                 _ -> ok
             end,
             [Form|parse_file(Epp)];
@@ -734,18 +734,18 @@ wait_request(St) ->
         {get_features, From} ->
             From ! St#epp.features,
             wait_request(St);
-        {enable_feature, Feature} ->
+        {enable_feature, {Feature, Loc}} ->
             Features = St#epp.features,
             St1 = case lists:member(Feature, Features) of
                       true ->
                           %% Feature already enabled - warn?
                           St;
                       false ->
-                          put(enable_feature, Feature),
+                          put(enable_feature, {Feature, Loc}),
                           St#epp{features = [Feature| Features]}
                   end,
             wait_request(St1);
-        {disable_feature, Feature} ->
+        {disable_feature, {Feature, Loc}} ->
             Features = St#epp.features,
             %% Skip this check for now, but the check should probably
             %% be done somewhere.
@@ -758,7 +758,7 @@ wait_request(St) ->
             %%               put(disable_feature, Feature),
             %%               St#epp{features = Features -- [Feature]}
             %%       end,
-            put(disable_feature, Feature),
+            put(disable_feature, {Feature, Loc}),
             St1 = St#epp{features = Features -- [Feature]},
             wait_request(St1);
 	{epp_request,From,macro_defs} ->
@@ -908,10 +908,8 @@ scan_toks(From, St0) ->
                     epp_reply(From, {error,{St#epp.location,epp,cannot_parse}}),
                     leave_file(wait_request(St), St)	%This serious, just exit!
             end;
-        {error, {Mod, Reason}} ->
-            #epp{file = _File, location = Loc} = St0,
-            %% FIXME How do I get the location reported?
-            epp_reply(From, {error, {Loc, Mod, Reason}}),
+        {error, {{Mod, Reason}, ErrLoc}} ->
+            epp_reply(From, {error, {ErrLoc, Mod, Reason}}),
             wait_req_scan(St0)
     end.
 
@@ -935,7 +933,7 @@ update_features(St0, Ind, NewFun, NewFtrs) ->
     case get(Ind) of
         undefined ->
             {ok, St0};
-        Feature ->
+        {Feature, Loc} ->
             Macs0 = St0#epp.macs,
             Ftrs0 = St0#epp.features,
             Ftrs1 = NewFtrs(Feature, Ftrs0),
@@ -959,9 +957,9 @@ update_features(St0, Ind, NewFun, NewFtrs) ->
                                   macs = Macs1},
                     put(Ind, undefined),
                     {ok, StX};
-                {error, _Reason} = Error ->
+                {error, Reason} ->
                     put(Ind, undefined),
-                    Error
+                    {error, {Reason, Loc}}
             end
     end.
 
