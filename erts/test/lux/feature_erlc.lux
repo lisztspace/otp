@@ -191,6 +191,10 @@
     ??{error,not_allowed}
     ?$ERLPROMPT
 
+    !features:features_used(f_maybe_ifn).
+    # Order not defined
+    ???[ifn_expr,maybe_expr]
+
 [shell cmds]
     [invoke compile f_macros.erl ""]
     ?SH-PROMPT:
@@ -229,6 +233,11 @@
 [shell erl]
     !l(f_macros).
     ??{error,not_allowed}
+    ?$ERLPROMPT
+
+    # Check which features were used during compilation
+    !features:features_used(f_macros).
+    ???[ifn_expr]
     ?$ERLPROMPT
 
     !features:enable_feature(ifn_expr).

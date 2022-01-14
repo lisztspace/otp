@@ -281,14 +281,24 @@ enabled_features() ->
 reserved_words() ->
     persistent_term:get(reserved_words).
 
-%% Temporary?
-features_used(Module) ->
-    case code:is_loaded(Module) of
-        false ->
-            not_loaded;
-        {file, FileName} ->
-            {ok, {_, [{_, Meta}]}} =
-                beam_lib:chunks(FileName, ["Meta"]),
+%% Return features used by module or beam file
+features_used(Module) when is_atom(Module) ->
+    case code:get_object_code(Module) of
+        error ->
+            not_found;
+        {_Mod, Bin, _Fname} ->
+            features_in(Bin)
+    end;
+features_used(FName) when is_list(FName) ->
+    features_in(FName).
+
+features_in(NameOrBin) ->
+    case beam_lib:chunks(NameOrBin, ["Meta"], [allow_missing_chunks]) of
+        {ok, {_, [{_, missing_chunk}]}} ->
+            [];
+        {ok, {_, [{_, Meta}]}} ->
             MetaData = erlang:binary_to_term(Meta),
-            proplists:get_value(enabled_features, MetaData, [])
+            proplists:get_value(enabled_features, MetaData, []);
+        _ ->
+            not_found
     end.
