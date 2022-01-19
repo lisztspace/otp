@@ -23,6 +23,7 @@
          feature_info/1,
          enabled_features/0,
          is_valid_feature/1,
+         load_allowed/1,
          reserved_words/0,
          reserved_words/1,
          resword_add_feature/2,
@@ -270,6 +271,26 @@ enabled_features() ->
 
 reserved_words() ->
     persistent_term:get(reserved_words).
+
+-spec load_allowed(binary()) -> boolean().
+load_allowed(Binary) ->
+    case erts_internal:beamfile_chunk(Binary, "Meta") of
+        undefined ->
+            true;
+        Meta ->
+            MetaData = erlang:binary_to_term(Meta),
+            case proplists:get_value(enabled_features, MetaData) of
+                undefined ->
+                    true;
+                Used ->
+                    Enabled = enabled_features(),
+                    lists:all(fun(UFtr) ->
+                                      lists:member(UFtr, Enabled)
+                              end,
+                              Used)
+            end
+    end.
+
 
 %% Return features used by module or beam file
 features_used(Module) when is_atom(Module) ->
