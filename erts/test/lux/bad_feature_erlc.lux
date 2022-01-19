@@ -58,7 +58,7 @@
     ?SH-PROMPT:
     [invoke ok]
 
-    [invoke compile f_ifn.erl "-enable-feature=ifn"]
+    [invoke compile f_ifn.erl "-enable-feature ifn"]
     ?the feature 'ifn' does not exist
     [invoke notok]
 
@@ -67,7 +67,7 @@
     ?SH-PROMPT:
     [invoke notok]
 
-    [invoke compile f_ifn.erl "-enable-feature=maybe"]
+    [invoke compile f_ifn.erl "-enable-feature maybe"]
     ?the feature 'maybe' does not exist
     ?SH-PROMPT:
     [invoke notok]
@@ -78,7 +78,7 @@
     ?SH-PROMPT:
     [invoke notok]
 
-    [invoke compile f_ifn.erl "-enable-feature=maybe -enable-feature=ifn"]
+    [invoke compile f_ifn.erl "-enable-feature maybe -enable-feature ifn"]
     # FIXME Fix order!
     ??the features 'ifn' and 'maybe' do not exist
     ?SH-PROMPT:
@@ -92,7 +92,7 @@
     ?the feature 'maybe' does not exist
     [invoke notok]
 
-    [invoke compile f_maybe.erl "-enable-feature=maybe"]
+    [invoke compile f_maybe.erl "-enable-feature maybe"]
     ?the feature 'maybe' does not exist
     [invoke notok]
 
@@ -101,7 +101,7 @@
     ?SH-PROMPT:
     [invoke notok]
 
-    [invoke compile f_maybe.erl "-enable-feature=ifn"]
+    [invoke compile f_maybe.erl "-enable-feature ifn"]
     ?the feature 'ifn' does not exist
     ?SH-PROMPT:
     [invoke notok]
@@ -112,12 +112,12 @@
     ?SH-PROMPT:
     [invoke notok]
 
-    [invoke compile f_maybe.erl "-enable-feature=maybe -enable-feature=ifn"]
+    [invoke compile f_maybe.erl "-enable-feature maybe -enable-feature ifn"]
     ??the features 'ifn' and 'maybe' do not exist
     ?SH-PROMPT:
     [invoke notok]
 
-    [invoke compile f_maybe.erl "-enable-feature=maybe -enable-feature=ifn -enable-feature=unless"]
+    [invoke compile f_maybe.erl "-enable-feature maybe -enable-feature ifn -enable-feature unless"]
     # FIXME fix order
     ??the features 'unless', 'ifn' and 'maybe' do not exist
     ?SH-PROMPT:
@@ -191,7 +191,7 @@
 
 
 [shell cmds]
-    [invoke compile f_incorrect_disable.erl "-disable-feature=ifn"]
+    [invoke compile f_incorrect_disable.erl "-disable-feature ifn"]
     ?the feature 'ifn' does not exist
     ?SH-PROMPT:
     [invoke notok]
