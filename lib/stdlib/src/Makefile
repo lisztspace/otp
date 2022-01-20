@@ -65,6 +65,7 @@ MODULES= \
 	erl_error \
 	erl_eval \
 	erl_expand_records \
+	erl_features \
 	erl_internal \
 	erl_lint \
 	erl_parse \
@@ -78,7 +79,6 @@ MODULES= \
 	escript \
 	ets \
 	eval_bits \
-	features \
 	file_sorter \
 	filelib \
 	filename \

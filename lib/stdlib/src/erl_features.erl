@@ -17,7 +17,7 @@
 %%
 %% %CopyrightEnd%
 %%
--module(features).
+-module(erl_features).
 
 -export([features/0,
          feature_info/1,
@@ -509,14 +509,14 @@ collect_features(FOps) ->
 collect_features([], Add, Del) ->
     {Add, Del};
 collect_features([{enable_feature, all}| FOps], Add, _Del) ->
-    All = features:features(),
+    All = features(),
     Add1 = lists:foldl(fun add_ftr/2, Add, All),
     collect_features(FOps, Add1, []);
 collect_features([{enable_feature, Feature}| FOps], Add, Del) ->
     collect_features(FOps, add_ftr(Feature, Add), Del -- [Feature]);
 collect_features([{disable_feature, all}| FOps], _Add, Del) ->
     %% Start over
-    All = features:features(),
+    All = features(),
     collect_features(FOps, [], Del -- All);
 collect_features([{disable_feature, Feature}| FOps], Add, Del) ->
     collect_features(FOps, Add -- [Feature],
