@@ -37,7 +37,7 @@
 
 -export([features_used/1]).
 
--on_load(init_features/0).
+%% -on_load(init_features/0).
 
 -type type() :: 'extension' | 'backwards_incompatible_change'.
 -type status() :: {'remove_planned'
@@ -213,53 +213,78 @@ format_error({invalid_features, Features}) ->
 init_features() ->
     persistent_term:put(enabled_features, []),
     persistent_term:put(reserved_words, []),
+
     case init:get_argument('enable-feature') of
         error ->
             %% no features enabled
             ok;
         {ok, Ftrs} ->
-            %% FIXME Need to be paranoid about any failures here.
-            %% Only convert to an existing atom.  This will also catch
-            %% a too long atom.
+            %% Convert failure, e.g., too long string for atom, to not
+            %% being a valid feature.
             F = fun(String) ->
-                        case catch list_to_existing_atom(String) of
-                            {'EXIT', _} -> false;
-                            Atom -> {is_valid_feature(Atom), Atom}
+                        try
+                            Atom = list_to_atom(String),
+                            case is_valid_feature(Atom) of
+                                true -> {true, Atom};
+                                false -> false
+                            end
+                        catch
+                            _ -> false
                         end
                 end,
-            lists:foreach(fun enable_feature/1,
-                          lists:filtermap(F, lists:append(Ftrs)))
+            {Enabled, Keywords} =
+                lists:foldl(fun(Ftr, {Features, Keys}) ->
+                                    case lists:member(Ftr, Features) of
+                                        true ->
+                                            {Features, Keys};
+                                        false ->
+                                            {[Ftr| Features],
+                                             reserved_words(Ftr) ++ Keys}
+                                    end
+                            end,
+                            {[], []},
+                            lists:filtermap(F, lists:append(Ftrs))),
+            enabled_features(Enabled),
+            set_reserved_words(Keywords)
     end,
+    persistent_term:put({?MODULE, init_done}, true),
     ok.
+
+ensure_init() ->
+    case persistent_term:get({?MODULE, init_done}, false) of
+        true -> ok;
+        false ->
+            init_features()
+    end.
 
 enable_feature(Feature) ->
     ?VALID_FEATURE(Feature),
 
-    Features = persistent_term:get(enabled_features),
+    Features = enabled_features(),
     case lists:member(Feature, Features) of
         true ->
             %% already there, maybe raise an error
             Features;
         false ->
             NewFeatures = [Feature| Features],
-            persistent_term:put(enabled_features, NewFeatures),
-            Res = persistent_term:get(reserved_words),
+            enabled_features(NewFeatures),
+            Res = reserved_words(),
             New = reserved_words(Feature),
-            persistent_term:put(reserved_words, New ++ Res),
+            set_reserved_words(New ++ Res),
             NewFeatures
     end.
 
 disable_feature(Feature) ->
     ?VALID_FEATURE(Feature),
 
-    Features = persistent_term:get(enabled_features),
+    Features = enabled_features(),
     case lists:member(Feature, Features) of
         true ->
             NewFeatures = Features -- [Feature],
-            persistent_term:put(enabled_features, NewFeatures),
-            Res = persistent_term:get(reserved_words),
+            enabled_features(NewFeatures),
+            Res = reserved_words(),
             Rem = reserved_words(Feature),
-            persistent_term:put(reserved_words, Res -- Rem),
+            set_reserved_words(Res -- Rem),
             NewFeatures;
         false ->
             %% Not there, possibly raise an error
@@ -267,10 +292,19 @@ disable_feature(Feature) ->
     end.
 
 enabled_features() ->
+    ensure_init(),
     persistent_term:get(enabled_features).
 
+enabled_features(Ftrs) ->
+    persistent_term:put(enabled_features, Ftrs).
+
 reserved_words() ->
+    ensure_init(),
     persistent_term:get(reserved_words).
+
+set_reserved_words(Words) ->
+    persistent_term:put(reserved_words, Words).
+
 
 -spec load_allowed(binary()) -> boolean().
 load_allowed(Binary) ->
