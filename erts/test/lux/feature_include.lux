@@ -1,0 +1,41 @@
+[doc Tests regarding feature enabling with include files]
+
+[include features.luxinc]
+
+[invoke setup]
+
+[newshell cmds]
+    # Ensure that the feature unless_expr is enabled in the
+    # include file and generates an error
+    [invoke compile f_include_1.erl ""]
+    ??syntax error before
+    [invoke notok]
+
+[shell cmds]
+    # Ensure that the macro knows that unless_expr is enabled in the
+    # include file
+    [invoke compile f_include_2.erl ""]
+    [invoke ok]
+
+[newshell erl]
+    [invoke start-erl "-enable-feature unless_expr"]
+    !l(f_include_2).
+    ??{module,f_include_2}
+    ?$ERLPROMPT
+
+    !f_include_2:foo(2).
+    ?active
+    ?$ERLPROMPT
+
+[shell cmds]
+    [invoke compile f_include_3.erl "-Dend_prefix"]
+    ?feature directive not allowed after anything interesting
+    [invoke notok]
+
+[shell cmds]
+    [invoke compile f_include_1.erl "-Dend_include"]
+    ?feature directive not allowed after anything interesting
+    [invoke notok]
+
+[cleanup]
+    # done
