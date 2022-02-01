@@ -1037,7 +1037,7 @@ do_parse_module(DefEncoding, #compile{ifile=File,options=Opts,dir=Dir}=St) ->
                     %% enabling features with
                     %% -compile({enable_feature, ..}).
                     UsedFtrs = proplists:get_value(features, Extra),
-                    St1 = metadata_add_features(Features ++ UsedFtrs, St),
+                    St1 = metadata_add_features(UsedFtrs, St),
                     Forms = case with_columns(Opts ++ compile_options(Forms0)) of
                                 true ->
                                     Forms0;

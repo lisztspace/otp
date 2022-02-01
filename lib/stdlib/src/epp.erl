@@ -318,19 +318,16 @@ parse_file(Ifile, Options) ->
     case open([{name, Ifile} | Options]) of
 	{ok,Epp} ->
 	    Forms = parse_file(Epp),
+            Epp ! {get_features, self()},
+            Ftrs = receive X -> X end,
 	    close(Epp),
-            Epp ! {get_features,self()},
-                Ftrs = receive X -> X end,
-	    {ok,Forms, [{features, Ftrs}]};
+	    {ok, Forms, [{features, Ftrs}]};
 	{ok,Epp,Extra} ->
 	    Forms = parse_file(Epp),
-            Epp ! {get_features,self()},
-                Ftrs = receive X -> X end,
+            Epp ! {get_features, self()},
+            Ftrs = receive X -> X end,
 	    close(Epp),
-            %% Return only *new* features, i.e., those added by
-            %% compile directives
-            UsedFtrs = Ftrs -- proplists:get_value(features, Options, []),
-	    {ok,Forms,[{features, UsedFtrs} | Extra]};
+	    {ok, Forms, [{features, Ftrs} | Extra]};
 	{error,E} ->
 	    {error,E}
     end.
