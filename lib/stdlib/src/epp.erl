@@ -73,6 +73,7 @@
 	            :: #{name() => [{argspec(), [used()]}]},
               default_encoding = ?DEFAULT_ENCODING :: source_encoding(),
               pre_opened = false :: boolean(),
+              in_prefix = true :: boolean(),
               erl_scan_opts = [] :: [_],
               features = [] :: [atom()],
               else_reserved = false :: boolean(),
@@ -242,6 +243,8 @@ format_error({error,Term}) ->
     io_lib:format("-error(~tp).", [Term]);
 format_error({warning,Term}) ->
     io_lib:format("-warning(~tp).", [Term]);
+format_error(ftr_after_prefix) ->
+    "feature directive not allowed after anything interesting";
 format_error(E) -> file:format_error(E).
 
 -spec scan_file(FileName, Options) ->
@@ -343,13 +346,6 @@ parse_file(Ifile, Options) ->
 parse_file(Epp) ->
     case parse_erl_form(Epp) of
 	{ok,Form} ->
-            case Form of
-                {attribute, Loc, compile, {enable_feature, Ftr}} ->
-                    Epp ! {enable_feature, {Ftr, Loc}};
-                {attribute, Loc, compile, {disable_feature, Ftr}} ->
-                    Epp ! {disable_feature, {Ftr, Loc}};
-                _ -> ok
-            end,
             [Form|parse_file(Epp)];
 	{error,E} ->
 	    [{error,E}|parse_file(Epp)];
@@ -734,33 +730,6 @@ wait_request(St) ->
         {get_features, From} ->
             From ! St#epp.features,
             wait_request(St);
-        {enable_feature, {Feature, Loc}} ->
-            Features = St#epp.features,
-            St1 = case lists:member(Feature, Features) of
-                      true ->
-                          %% Feature already enabled - warn?
-                          St;
-                      false ->
-                          put(enable_feature, {Feature, Loc}),
-                          St#epp{features = [Feature| Features]}
-                  end,
-            wait_request(St1);
-        {disable_feature, {Feature, Loc}} ->
-            Features = St#epp.features,
-            %% Skip this check for now, but the check should probably
-            %% be done somewhere.
-            %% FIXME see above
-            %% St1 = case lists:member(Feature, Features) of
-            %%           false ->
-            %%               %% Feature not enabled - warn?
-            %%               St;
-            %%           true ->
-            %%               put(disable_feature, Feature),
-            %%               St#epp{features = Features -- [Feature]}
-            %%       end,
-            put(disable_feature, {Feature, Loc}),
-            St1 = St#epp{features = Features -- [Feature]},
-            wait_request(St1);
 	{epp_request,From,macro_defs} ->
 	    %% Return the old format to avoid any incompability issues.
 	    Defs = [{{atom,K},V} || {K,V} <- maps:to_list(St#epp.macs)],
@@ -817,7 +786,10 @@ enter_file2(NewF, Pname, From, St0, AtLocation) ->
     Anno = erl_anno:new(AtLocation),
     enter_file_reply(From, Pname, Anno, AtLocation, code),
     #epp{macs = Ms0,
-         default_encoding = DefEncoding} = St0,
+         default_encoding = DefEncoding,
+         in_prefix = InPrefix,
+         erl_scan_opts = ScanOpts,
+         features = Ftrs} = St0,
     Ms = Ms0#{'FILE':={none,[{string,Anno,Pname}]}},
     %% update the head of the include path to be the directory of the new
     %% source file, so that an included file can always include other files
@@ -829,6 +801,9 @@ enter_file2(NewF, Pname, From, St0, AtLocation) ->
     _ = set_encoding(NewF, DefEncoding),
     #epp{file=NewF,location=AtLocation,name=Pname,name2=Pname,delta=0,
          sstk=[St0|St0#epp.sstk],path=Path,macs=Ms,
+         in_prefix = InPrefix,
+         features = Ftrs,
+         erl_scan_opts = ScanOpts,
          default_encoding=DefEncoding}.
 
 enter_file_reply(From, Name, LocationAnno, AtLocation, Where) ->
@@ -870,8 +845,14 @@ leave_file(From, St) ->
                     CurrLoc = add_line(OldLoc, Delta),
                     Anno = erl_anno:new(CurrLoc),
 		    Ms0 = St#epp.macs,
+                    InPrefix = St#epp.in_prefix,
+                    Ftrs = St#epp.features,
+                    ScanOpts = St#epp.erl_scan_opts,
 		    Ms = Ms0#{'FILE':={none,[{string,Anno,OldName2}]}},
-                    NextSt = OldSt#epp{sstk=Sts,macs=Ms,uses=St#epp.uses},
+                    NextSt = OldSt#epp{sstk=Sts,macs=Ms,uses=St#epp.uses,
+                                       in_prefix = InPrefix,
+                                       features = Ftrs,
+                                       erl_scan_opts = ScanOpts},
 		    enter_file_reply(From, OldName, Anno, CurrLoc, code),
                     case OldName2 =:= OldName of
                         true ->
@@ -892,85 +873,31 @@ leave_file(From, St) ->
 %% scan_toks(From, EppState)
 %% scan_toks(Tokens, From, EppState)
 
-scan_toks(From, St0) ->
-    case update_features(St0) of
-        {ok, St} ->
-            #epp{file = File, location = Loc, erl_scan_opts = ScanOpts} = St,
-            case io:scan_erl_form(File, '', Loc, ScanOpts) of
-                {ok,Toks,Cl} ->
-                    scan_toks(Toks, From, St#epp{location=Cl});
-                {error,E,Cl} ->
-                    epp_reply(From, {error,E}),
-                    wait_req_scan(St#epp{location=Cl});
-                {eof,Cl} ->
-                    leave_file(From, St#epp{location=Cl});
-                {error,_E} ->
-                    epp_reply(From, {error,{St#epp.location,epp,cannot_parse}}),
-                    leave_file(wait_request(St), St)	%This serious, just exit!
-            end;
-        {error, {{Mod, Reason}, ErrLoc}} ->
-            epp_reply(From, {error, {ErrLoc, Mod, Reason}}),
-            wait_req_scan(St0)
+scan_toks(From, St) ->
+    #epp{file = File, location = Loc, erl_scan_opts = ScanOpts} = St,
+    case io:scan_erl_form(File, '', Loc, ScanOpts) of
+        {ok,Toks,Cl} ->
+            scan_toks(Toks, From, St#epp{location=Cl});
+        {error,E,Cl} ->
+            epp_reply(From, {error,E}),
+            wait_req_scan(St#epp{location=Cl});
+        {eof,Cl} ->
+            leave_file(From, St#epp{location=Cl});
+        {error,_E} ->
+            epp_reply(From, {error,{St#epp.location,epp,cannot_parse}}),
+            leave_file(wait_request(St), St)	%This serious, just exit!
     end.
 
-update_features(St0) ->
-    case update_features(St0,
-                          enable_feature,
-                          fun features:resword_add_feature/2,
-                          fun(F, Fs) -> [F| Fs] end) of
-        {ok, St1} ->
-            update_features(St1,
-                            disable_feature,
-                            fun features:resword_remove_feature/2,
-                            fun(F, Fs) -> Fs -- [F] end);
-        {error, _Reason} = Error ->
-            %% FIXME We might fail to report a potential error of a
-            %% disabled feature
-            Error
-    end.
-
-update_features(St0, Ind, NewFun, NewFtrs) ->
-    case get(Ind) of
-        undefined ->
-            {ok, St0};
-        {Feature, Loc} ->
-            Macs0 = St0#epp.macs,
-            Ftrs0 = St0#epp.features,
-            Ftrs1 = NewFtrs(Feature, Ftrs0),
-            Macs1 = Macs0#{'FEATURE_ENABLED' =>
-                               [ftr_macro(Ftrs1)]},
-            ScanOptsX = St0#epp.erl_scan_opts,
-            ResWordFun =
-                case proplists:get_value(reserved_word_fun, ScanOptsX) of
-                    undefined -> fun erl_scan:f_reserved_word/1;
-                    Fun -> Fun
-                end,
-            case NewFun(Feature, ResWordFun) of
-                {ok, ResWordFun1} ->
-                    %% FIXME WE need to keep any other scan_opts
-                    %% present.  Right now, there are no other, but
-                    %% that might change.
-                    StX = St0#epp{erl_scan_opts =
-                                      [{reserved_word_fun, ResWordFun1}],
-                                  features = Ftrs1,
-                                  else_reserved = ResWordFun1('else'),
-                                  macs = Macs1},
-                    put(Ind, undefined),
-                    {ok, StX};
-                {error, Reason} ->
-                    put(Ind, undefined),
-                    {error, {Reason, Loc}}
-            end
-    end.
-
+scan_toks([{'-',_Lh},{atom,_Ld,feature}=Feature|Toks], From, St) ->
+    scan_feature(Toks, Feature, From, St);
 scan_toks([{'-',_Lh},{atom,_Ld,define}=Define|Toks], From, St) ->
     scan_define(Toks, Define, From, St);
 scan_toks([{'-',_Lh},{atom,_Ld,undef}=Undef|Toks], From, St) ->
-    scan_undef(Toks, Undef, From, St);
+    scan_undef(Toks, Undef, From, leave_prefix(St));
 scan_toks([{'-',_Lh},{atom,_Ld,error}=Error|Toks], From, St) ->
-    scan_err_warn(Toks, Error, From, St);
+    scan_err_warn(Toks, Error, From, leave_prefix(St));
 scan_toks([{'-',_Lh},{atom,_Ld,warning}=Warn|Toks], From, St) ->
-    scan_err_warn(Toks, Warn, From, St);
+    scan_err_warn(Toks, Warn, From, leave_prefix(St));
 scan_toks([{'-',_Lh},{atom,_Li,include}=Inc|Toks], From, St) ->
     scan_include(Toks, Inc, From, St);
 scan_toks([{'-',_Lh},{atom,_Li,include_lib}=IncLib|Toks], From, St) ->
@@ -1002,12 +929,36 @@ scan_toks([{'-',_Lh},{atom,_Lf,file}=FileToken|Toks0], From, St) ->
 scan_toks(Toks0, From, St) ->
     case catch expand_macros(Toks0, St#epp{fname=Toks0}) of
 	Toks1 when is_list(Toks1) ->
+            InPrefix =
+                St#epp.in_prefix
+                andalso case Toks1 of
+                            [] -> true;
+                            [{'-', _Loc}, Tok | _] ->
+                                in_prefix(Tok);
+                            _ ->
+                                false
+                        end,
 	    epp_reply(From, {ok,Toks1}),
-	    wait_req_scan(St#epp{macs=scan_module(Toks1, St#epp.macs)});
+	    wait_req_scan(St#epp{in_prefix = InPrefix,
+                                 macs=scan_module(Toks1, St#epp.macs)});
 	{error,ErrL,What} ->
 	    epp_reply(From, {error,{ErrL,epp,What}}),
 	    wait_req_scan(St)
     end.
+
+%% Determine whether we have passed the prefix where a -feature
+%% directive is allowed.
+in_prefix({atom, _, Atom}) ->
+    %% These directives are allowed inside the prefix
+    lists:member(Atom, ['module', 'feature',
+                        'if', 'else', 'elif', 'endif', 'ifdef', 'ifndef',
+                        'define', 'undef',
+                        'include', 'include_lib']);
+in_prefix(_T) ->
+    false.
+
+leave_prefix(#epp{} = St) ->
+    St#epp{in_prefix = false}.
 
 scan_module([{'-',_Ah},{atom,_Am,module},{'(',_Al}|Ts], Ms) ->
     scan_module_1(Ts, Ms);
@@ -1048,6 +999,58 @@ scan_err_warn(Toks, {atom,_,Tag}=Token, From, St) ->
     T = no_match(Toks, Token),
     epp_reply(From, {error,{loc(T),epp,{bad,Tag}}}),
     wait_req_scan(St).
+
+%% scan a feature directive
+scan_feature([{'(', _Ap}, {atom, _Am, Ind},
+              {',', _}, {atom, _, Ftr}, {')', _}, {dot, _}],
+             Feature, From, St)
+  when St#epp.in_prefix,
+       (Ind =:= enable
+        orelse Ind =:= disable) ->
+    case update_features(St, Ind, Ftr, loc(Feature)) of
+        {ok, St1} ->
+            scan_toks(From, St1);
+        {error, {{Mod, Reason}, ErrLoc}} ->
+            epp_reply(From, {error, {ErrLoc, Mod, Reason}}),
+            wait_req_scan(St)
+    end;
+scan_feature([{'(', _Ap}, {atom, _Am, _Ind},
+              {',', _}, {atom, _, _Ftr}, {')', _}, {dot, _}| _Toks],
+             Feature, From, St) when not St#epp.in_prefix ->
+    epp_reply(From, {error, {loc(Feature), epp,
+                             ftr_after_prefix}}),
+    wait_req_scan(St);
+scan_feature(Toks, {atom, _, Tag} = Token, From, St) ->
+    T = no_match(Toks, Token),
+    epp_reply(From, {error,{loc(T),epp,{bad,Tag}}}),
+    wait_req_scan(St).
+
+%% FIXME Rewrite this
+update_features(St0, Ind, Ftr, Loc) ->
+    Ftrs0 = St0#epp.features,
+    ScanOpts = St0#epp.erl_scan_opts,
+    KeywordFun =
+        case proplists:get_value(reserved_word_fun, ScanOpts) of
+            undefined -> fun erl_scan:f_reserved_word/1;
+            Fun -> Fun
+        end,
+    case features:keyword_fun(Ind, Ftr, Ftrs0, KeywordFun) of
+        {error, Reason} ->
+            {error, {Reason, Loc}};
+        {ok, ResWordFun1, Ftrs1} ->
+            Macs0 = St0#epp.macs,
+            Macs1 = Macs0#{'FEATURE_ENABLED' => [ftr_macro(Ftrs1)]},
+            %% ?liof("ok!\n", []),
+            %% FIXME WE need to keep any other scan_opts
+            %% present.  Right now, there are no other, but
+            %% that might change.
+            StX = St0#epp{erl_scan_opts =
+                              [{reserved_word_fun, ResWordFun1}],
+                          features = Ftrs1,
+                          else_reserved = ResWordFun1('else'),
+                          macs = Macs1},
+            {ok, StX}
+    end.
 
 %% scan_define(Tokens, DefineToken, From, EppState)
 
