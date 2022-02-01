@@ -20,11 +20,11 @@
 
 -module(f_disable).
 
--export([do/1,
-	 no_ifn/0,
-	 no_ftrs/0]).
+-feature(disable, ifn_expr).
+-feature(disable, maybe_expr).
 
--compile({disable_feature, ifn_expr}).
+-export([no_ifn/0,
+	 no_ftrs/0]).
 
 -if(?FEATURE_ENABLED(ifn_expr)).
 -define(FOO, has_ifn).
@@ -35,8 +35,6 @@
 no_ifn() ->
     [ifn, 'maybe', ?FOO].
 
--compile({disable_feature, maybe_expr}).
-
 -if(?FEATURE_ENABLED(maybe_expr)).
 -define(BAR, has_maybe).
 -else.
@@ -46,9 +44,9 @@ no_ifn() ->
 no_ftrs() ->
     [ifn, maybe, else, ?BAR].
 
--compile({enable_feature, ifn_expr}).
+%% -compile({enable_feature, ifn_expr}).
 
-do(X) ->
-    ifn X > 10 ->
-	    maybe
-    end.
+%% do(X) ->
+%%     ifn X > 10 ->
+%% 	    maybe
+%%     end.

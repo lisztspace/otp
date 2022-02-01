@@ -18,40 +18,29 @@
 %% %CopyrightEnd%
 %%
 
-%% FIXME This file contains too much in erlation to what it tests
+-module(f_directives_2).
 
--module(f_incorrect_disable).
+%% This module uses the feature ifn_expr, so atoms belonging to that
+%% featurfe need to be quoted.
 
--feature(disable, unless).
-
--export([do/1,
-	 no_ifn/0,
-	 no_ftrs/0]).
-
-
--if(?FEATURE_ENABLED(ifn_expr)).
--define(FOO, has_ifn).
--else.
--define(FOO, no_ifn).
--endif.
-
-no_ifn() ->
-    [ifn, 'maybe', ?FOO].
-
--feature(disable, maybe_expr).
-
--if(?FEATURE_ENABLED(maybe_expr)).
--define(BAR, has_maybe).
--else.
--define(BAR, no_maybe).
--endif.
-
-no_ftrs() ->
-    [ifn, maybe, then, ?BAR].
-
+-feature(enable, while_expr).
 -feature(enable, ifn_expr).
+%% Disable feature so atoms beonging to maybe_expr can be unquoted
+-feature(disable, while_expr).
 
-do(X) ->
-    ifn X > 10 ->
-	    maybe
-    end.
+-export([foo/0,
+	 bar/0,
+         baz/1
+	]).
+
+foo() ->
+    %% Note: xmaybe_expr not active here
+    ['ifn', while, until, 'if'].
+
+bar() ->
+    ['until', 'while'].
+
+baz(0) ->
+    [while];
+baz(1) ->
+    [until].

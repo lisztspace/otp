@@ -240,6 +240,8 @@
     ???[ifn_expr]
     ?$ERLPROMPT
 
+    # Somewhat questionable if we really should allow this in runtime
+    # FIXME WE should *not* allow this at runtime.
     !features:enable_feature(ifn_expr).
     ??[ifn_expr]
     ?$ERLPROMPT
@@ -356,11 +358,6 @@
 
     !f_disable:no_ftrs().
     ???['ifn','maybe','else',no_maybe]
-    ?$ERLPROMPT
-
-    !f_disable:do(5).
-    # FIXME Should really be 'maybe'
-    ?maybe
     ?$ERLPROMPT
 
 [shell cmds]

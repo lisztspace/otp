@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2021-2021. All Rights Reserved.
+%% Copyright Ericsson AB 2021-2022. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -20,13 +20,13 @@
 
 -module(f_ifnot).
 
+-feature(enable, ifnot_expr).
+
 -export([f0/0,
 	 f1/0,
 	 f2/0,
 	 f3/0,
 	 f4/1]).
-
--compile({enable_feature, ifnot_expr}).
 
 f0() ->
     ifnot false -> 40 + 2 end.

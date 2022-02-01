@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2021-2021. All Rights Reserved.
+%% Copyright Ericsson AB 2021-2022. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -27,16 +27,14 @@
 	 bar/0
 	]).
 
-%% NOTE: We should quote the feature name due to it being the same as
-%% the new reserved word and it might have been enabled earlier, i.e.,
-%% from the command line or in argumemts to compile:file/..
--compile({enable_feature, ifn}).
+%% FIXME This is out of place, but not check in any test.
+-feature(enable, ifn).
 
 foo() ->
     %% Note: maybe_expr not active here
     ['ifn', maybe, then, 'if'].
 
--compile({enable_feature, maybe}).
+-feature(enable, maybe).
 
 bar() ->
     ['then', 'maybe'].

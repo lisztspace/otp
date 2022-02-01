@@ -18,33 +18,16 @@
 %% %CopyrightEnd%
 %%
 
-%% This module knows about the both features ifn_expr and maybe_expr
-%% These atoms are thus quoted
-
 -module(f_directives).
 
--export([foo/0,
-	 bar/0,
-         baz/1
+%% This module uses both features ifn_expr and maybe_expr, so atoms
+%% belonging to these need t be quoted.
+
+-feature(enable, ifn_expr).
+-feature(enable, while_expr).
+
+-export([bar/0
 	]).
 
-%% NOTE: We should quote the feature name due to it being the same as
-%% the new reserved word and it might have been enabled earlier, i.e.,
-%% from the command line or in argumemts to compile:file/..
--compile({enable_feature, ifn_expr}).
-
-foo() ->
-    %% Note: maybe_expr not active here
-    ['ifn', maybe, else, 'if'].
-
--compile({enable_feature, maybe_expr}).
-
 bar() ->
-    ['else', 'maybe'].
-
--compile({disable_feature, maybe_expr}).
-
-baz(0) ->
-    [maybe];
-baz(1) ->
-    [else].
+    ['xelse', 'xwhile', 'ifn'].

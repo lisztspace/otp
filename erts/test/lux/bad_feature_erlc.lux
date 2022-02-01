@@ -128,13 +128,13 @@
     [invoke ok]
 
 
-    # This file has instances of -compile({enable_feature, ..}) inside
+    # This file has instances of -feature(enable, ..}) inside
     [invoke compile f_incorrect_directives.erl ""]
-    ?the feature 'ifn' does not exist
-    ?%.*[0-9]+\| -compile
-    ?the feature 'maybe' does not exist
-    ?%.*[0-9]+\| -compile
-    [invoke notok]
+    # FIXME Should we report an incorrect feature when it is in the wrong place?
+    # ?the feature 'ifn' does not exist
+    # ?%.*[0-9]+\| -feature
+    ?feature directive not allowed after anything interesting
+    ?%.*[0-9]+\| -feature
 
 [newshell erl]
     !erl -pa $outdir
@@ -162,12 +162,33 @@
     ???{ok,f_directives}
     ?$ERLPROMPT
 
+    # Test a sequence of enable and disable of the same feature
+    # FIXME This should perhaps be elsewhere
+    [invoke erl-compile f_directives_2.erl []]
+    ???{ok,f_directives_2}
+    ?$ERLPROMPT
+
 [shell cmds]
+    # Enable a feature on the command line and disable it in a directive
+    # FIXME This should perhaps be elsewhere
+    [invoke compile f_directives_3.erl "-enable-feature maybe_expr"]
+    [invoke ok]
+
     [invoke compile f_macros.erl ""]
     ?SH-PROMPT:
     [invoke ok]
 
 [shell erl]
+    # Verify that only ifn_expr is used
+    !features:features_used(f_directives_2).
+    ??[ifn_expr]
+    ?$ERLPROMPT
+
+    # Verify that only ifn_expr is used
+    !features:features_used(f_directives_3).
+    ??[ifn_expr]
+    ?$ERLPROMPT
+
     !l(f_macros).
     ?{module,f_macros}
     ?$ERLPROMPT
@@ -198,7 +219,7 @@
 
     [invoke compile f_incorrect_disable.erl ""]
     ?the feature 'unless' does not exist
-    ?%.*[0-9]+\| -compile
+    ?%.*[0-9]+\| -feature
     ?SH-PROMPT:
     [invoke notok]
 
