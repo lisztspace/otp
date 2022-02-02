@@ -195,6 +195,13 @@
     # Order not defined
     ???[ifn_expr,maybe_expr]
 
+    # Try to load the binary directly
+    !{Mod,Bin,FName}=code:get_object_code(f_maybe_ifn).
+    ?$ERLPROMPT
+    !code:load_binary(Mod,FName,Bin).
+    ??{error,not_allowed}
+    ?$ERLPROMPT
+
 [shell cmds]
     [invoke compile f_macros.erl ""]
     ?SH-PROMPT:
