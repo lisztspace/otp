@@ -71,12 +71,7 @@ is_valid_feature(Ftr) ->
       FeatureInfoMap ::
         #{description := Description,
           type := type(),
-          status := status(),
-          %% List of additional compiler options to be given to
-          %% activate this feature.  Useful when there is a dependency
-          %% to other features.
-          %% FIXME Should this rather be named dependencies?
-          options := list()
+          status := status()
          }.
 feature_info(ifn_expr) ->
     #{description =>
@@ -86,8 +81,7 @@ feature_info(ifn_expr) ->
       "support for experimental features.  Not extensively tested.  "
       "Implementated by a transformation in the parser.",
       status => {experimental, 24},
-      type => extension,
-      options => []};
+      type => extension};
 feature_info(ifnot_expr) ->
     #{description =>
           "Inclusion of expression `ifnot cond -> body end`, which "
@@ -96,22 +90,19 @@ feature_info(ifnot_expr) ->
       "support for experimental features.  Not extensively tested.  "
       "Similar to ifn_expr, but with a deeper implementation.",
       status => {experimental, 25},
-      type => extension,
-      options => []};
+      type => extension};
 feature_info(maybe_expr) ->
     #{description =>
           "Implementation of the maybe expression proposed in EEP49 -- "
       "Value based error handling.",
       status => {experimental, 25},
-      type => extension,
-      options => []};
+      type => extension};
 feature_info(unless_expr) ->
     #{description =>
           "Introduction of new expression `unless <cond> -> <body> end."
       "Truly experimental.",
       status => {experimental, 25},
-      type => extension,
-      options => []};
+      type => extension};
 feature_info(Ftr) ->
     ?VALID_FEATURE(Ftr).
 
