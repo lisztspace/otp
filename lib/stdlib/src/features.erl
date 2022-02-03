@@ -21,6 +21,8 @@
 
 -export([features/0,
          feature_info/1,
+         short/1,
+         long/1,
          enabled_features/0,
          is_valid_feature/1,
          load_allowed/1,
@@ -66,16 +68,41 @@ features() ->
 is_valid_feature(Ftr) ->
     lists:member(Ftr, features()).
 
+-spec short(atom()) -> iolist().
+short(Feature) ->
+    #{short := Short,
+      status := Status} = feature_info(Feature),
+    io_lib:format("~-40s ~p", [Short, Status]).
+
+long(Feature) ->
+    #{short := Short,
+      description := Description,
+      status := Status,
+      type := Type} = feature_info(Feature),
+    Keywords = reserved_words(Feature),
+    io_lib:format("~s - ~s\n"
+                  "  ~-15s ~s\n"
+                  "  ~-15s ~p\n"
+                  "  ~-15s ~p\n\n"
+                  "~s\n",
+                  [Feature, Short,
+                   "Type", Type,
+                   "Status", Status,
+                   "Keywords", Keywords,
+                   Description]).
+
 -spec feature_info(atom()) -> FeatureInfoMap
               when
       Description :: string(),
       FeatureInfoMap ::
         #{description := Description,
+          short := Description,
           type := type(),
           status := status()
          }.
 feature_info(ifn_expr) ->
-    #{description =>
+    #{short => "New expression `ifn cond -> body end`",
+      description =>
           "Inclusion of expression `ifn cond -> body end`, which "
       "evaluates `body` when cond is false.  This is a truly "
       "experimental feature, present only to show and use the "
@@ -84,7 +111,8 @@ feature_info(ifn_expr) ->
       status => {experimental, 24},
       type => extension};
 feature_info(ifnot_expr) ->
-    #{description =>
+    #{short => "New expression `ifnot cond -> body end`",
+      description =>
           "Inclusion of expression `ifnot cond -> body end`, which "
       "evaluates `body` when cond is false.  This is a truly "
       "experimental feature, present only to show and use the "
@@ -93,13 +121,15 @@ feature_info(ifnot_expr) ->
       status => {experimental, 25},
       type => extension};
 feature_info(maybe_expr) ->
-    #{description =>
+    #{short => "Value based error handling (EEP49)",
+      description =>
           "Implementation of the maybe expression proposed in EEP49 -- "
       "Value based error handling.",
       status => {experimental, 25},
       type => extension};
 feature_info(unless_expr) ->
-    #{description =>
+    #{short => "`unless <cond> -> <body> end",
+      description =>
           "Introduction of new expression `unless <cond> -> <body> end."
       "Truly experimental.",
       status => {experimental, 25},
