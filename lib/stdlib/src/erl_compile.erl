@@ -185,6 +185,14 @@ parse_generic_option("disable-feature" ++ Str, T0,
     {FtrStr, T} = get_option("disable-feature", Str, T0),
     Feature = list_to_atom(FtrStr),
     compile1(T, Opts#options{specific = [{disable_feature, Feature}| Spec]});
+parse_generic_option("describe-feature" ++ Str, T0,
+                     #options{specific = Spec} = Opts) ->
+    {FtrStr, T} = get_option("disable-feature", Str, T0),
+    Feature = list_to_atom(FtrStr),
+    compile1(T, Opts#options{specific =[{describe_feature, Feature}| Spec]});
+parse_generic_option("list-features", T,
+                     #options{specific = Spec} = Opts) ->
+    compile1(T, Opts#options{specific =[{list_features, true}| Spec]});
 parse_generic_option(Option, _T, _Opts) ->
     usage(io_lib:format("Unknown option: -~ts\n", [Option])).
 
@@ -266,14 +274,19 @@ split_at_equals([], Acc) ->
     {lists:reverse(Acc),[]}.
 
 compile2(Files, #options{cwd=Cwd,includes=Incl,outfile=Outfile}=Opts0) ->
-    Opts = Opts0#options{includes=lists:reverse(Incl)},
-    case {Outfile,length(Files)} of
-	{"", _} ->
-	    compile3(Files, Cwd, Opts);
-	{[_|_], 1} ->
-	    compile3(Files, Cwd, Opts);
-	{[_|_], _N} ->
-            throw({error, "Output file name given, but more than one input file.\n"})
+    case show_info(Opts0) of
+        {ok, Msg} ->
+            throw({error, Msg});
+        false ->
+            Opts = Opts0#options{includes=lists:reverse(Incl)},
+            case {Outfile,length(Files)} of
+                {"", _} ->
+                    compile3(Files, Cwd, Opts);
+                {[_|_], 1} ->
+                    compile3(Files, Cwd, Opts);
+                {[_|_], _N} ->
+                    throw({error, "Output file name given, but more than one input file.\n"})
+            end
     end.
 
 %% Compile the list of files, until done or compilation fails.
@@ -291,6 +304,28 @@ compile3([File|Rest], Cwd, Options) ->
     compile_file(Ext, InFile, OutFile, Options),
     compile3(Rest, Cwd, Options);
 compile3([], _Cwd, _Options) -> ok.
+
+show_info(#options{specific = Spec}) ->
+    G = fun G0([]) -> undefined;
+            G0([E|Es]) ->
+                case proplists:get_value(E, Spec) of
+                    undefined -> G0(Es);
+                    V -> {E, V}
+                end
+        end,
+
+    case G([list_features, describe_feature]) of
+        {list_features, true} ->
+            Features = erl_features:features(),
+            Msg = ["Available features:\n",
+                   [io_lib:format(" ~-13s ~s\n", [Ftr, erl_features:short(Ftr)])
+                    || Ftr <- Features]],
+            {ok, Msg};
+        {describe_feature, Ftr} ->
+            {ok, erl_features:long(Ftr)};
+        _ ->
+            false
+    end.
 
 %% Invoke the appropriate compiler, depending on the file extension.
 compile_file("", Input, _Output, _Options) ->
