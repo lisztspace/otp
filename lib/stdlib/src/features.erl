@@ -44,8 +44,7 @@
                    | 'removed'
                    | 'included'
                    | 'experimental', release()}.
--type release() :: {Major :: non_neg_integer(),
-                    Minor :: non_neg_integer()}.
+-type release() :: non_neg_integer().
 -type error() :: {?MODULE, {'invalid_features', [atom()]}}.
 
 -define(VALID_FEATURE(Feature),
@@ -86,7 +85,7 @@ feature_info(ifn_expr) ->
       "experimental feature, present only to show and use the "
       "support for experimental features.  Not extensively tested.  "
       "Implementated by a transformation in the parser.",
-      status => {experimental, {24, 2}},
+      status => {experimental, 24},
       type => extension,
       options => []};
 feature_info(ifnot_expr) ->
@@ -96,21 +95,21 @@ feature_info(ifnot_expr) ->
       "experimental feature, present only to show and use the "
       "support for experimental features.  Not extensively tested.  "
       "Similar to ifn_expr, but with a deeper implementation.",
-      status => {experimental, {24, 2}},
+      status => {experimental, 25},
       type => extension,
       options => []};
 feature_info(maybe_expr) ->
     #{description =>
           "Implementation of the maybe expression proposed in EEP49 -- "
       "Value based error handling.",
-      status => {experimental, {25, 0}},
+      status => {experimental, 25},
       type => extension,
       options => []};
 feature_info(unless_expr) ->
     #{description =>
           "Introduction of new expression `unless <cond> -> <body> end."
       "Truly experimental.",
-      status => {experimental, {25, 0}},
+      status => {experimental, 25},
       type => extension,
       options => []};
 feature_info(Ftr) ->
