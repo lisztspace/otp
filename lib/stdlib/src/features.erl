@@ -42,11 +42,10 @@
 %% -on_load(init_features/0).
 
 -type type() :: 'extension' | 'backwards_incompatible_change'.
--type status() :: {'remove_planned'
-                   | 'inclusion_planned'
-                   | 'removed'
-                   | 'included'
-                   | 'experimental', release()}.
+-type status() :: 'experimental'
+                  | 'approved'
+                  | 'permanent'
+                  | 'rejected'.
 -type release() :: non_neg_integer().
 -type error() :: {?MODULE, {'invalid_features', [atom()]}}.
 
@@ -63,7 +62,7 @@
 %% Currently know features
 -spec features() -> [atom()].
 features() ->
-    [ifn_expr, maybe_expr, ifnot_expr, unless_expr].
+    [ifn_expr, maybe_expr, ifnot_expr, unless_expr, maps, cond_expr].
 
 is_valid_feature(Ftr) ->
     lists:member(Ftr, features()).
@@ -98,7 +97,11 @@ long(Feature) ->
         #{description := Description,
           short := Description,
           type := type(),
-          status := status()
+          status := status(),
+          experimental => release(),
+          approved => release(),
+          permanent => release(),
+          rejected => release()
          }.
 feature_info(ifn_expr) ->
     #{short => "New expression `ifn cond -> body end`",
@@ -108,7 +111,8 @@ feature_info(ifn_expr) ->
       "experimental feature, present only to show and use the "
       "support for experimental features.  Not extensively tested.  "
       "Implementated by a transformation in the parser.",
-      status => {experimental, 24},
+      status => experimental,
+      experimental => 24,
       type => extension};
 feature_info(ifnot_expr) ->
     #{short => "New expression `ifnot cond -> body end`",
@@ -118,26 +122,46 @@ feature_info(ifnot_expr) ->
       "experimental feature, present only to show and use the "
       "support for experimental features.  Not extensively tested.  "
       "Similar to ifn_expr, but with a deeper implementation.",
-      status => {experimental, 25},
+      status => experimental,
+      experimental => 25,
       type => extension};
 feature_info(maybe_expr) ->
     #{short => "Value based error handling (EEP49)",
       description =>
           "Implementation of the maybe expression proposed in EEP49 -- "
       "Value based error handling.",
-      status => {experimental, 25},
+      status => experimental,
+      experimental => 25,
       type => extension};
 feature_info(unless_expr) ->
     #{short => "`unless <cond> -> <body> end",
       description =>
           "Introduction of new expression `unless <cond> -> <body> end."
-      "Truly experimental.",
-      status => {experimental, 25},
+      " Truly experimental.",
+      status => experimental,
+      experimental => 25,
+      type => extension};
+feature_info(maps) ->
+    #{short => "Add maps as new data type",
+      description => "Add new low data type maps with syntactic "
+      "support in Erlang as well native support in the beam. "
+      "Insert, lookup and delete are asymptotically constant.",
+      status => permanent,
+      experimental => 17,
+      approved => 18,
+      permanent => 19,
+      type => extension};
+feature_info(cond_expr) ->
+    #{short => "Introduce general Lisp style conditional",
+      description =>
+          "Finally complement the painfully broken `if` "
+      "with a general conditional as in Lisp from the days of old.",
+      status => approved,
+      experimental => 24,
+      approved => 25,
       type => extension};
 feature_info(Ftr) ->
     ?VALID_FEATURE(Ftr).
-
-
 
 %% New reserved words for a feature.  The current set is just for
 %% tests and development.
@@ -150,6 +174,8 @@ reserved_words(ifnot_expr) ->
     ['ifnot'];
 reserved_words(unless_expr) ->
     ['unless'];
+reserved_words(maps) -> [];
+reserved_words(cond_expr) -> [];
 reserved_words(Ftr) ->
     ?VALID_FEATURE(Ftr).
 
