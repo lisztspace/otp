@@ -70,25 +70,68 @@ is_valid_feature(Ftr) ->
 -spec short(atom()) -> iolist().
 short(Feature) ->
     #{short := Short,
-      status := Status} = feature_info(Feature),
-    io_lib:format("~-40s ~p", [Short, Status]).
+      status := Status} = Info = feature_info(Feature),
+    #{Status := Release} = Info,
+    io_lib:format("~-40s ~-12s (~p)", [Short, Status, Release]).
 
 long(Feature) ->
     #{short := Short,
       description := Description,
       status := Status,
-      type := Type} = feature_info(Feature),
+      type := Type} = Info = feature_info(Feature),
     Keywords = reserved_words(Feature),
-    io_lib:format("~s - ~s\n"
-                  "  ~-15s ~s\n"
-                  "  ~-15s ~p\n"
-                  "  ~-15s ~p\n\n"
-                  "~s\n",
-                  [Feature, Short,
-                   "Type", Type,
-                   "Status", Status,
-                   "Keywords", Keywords,
-                   Description]).
+    StatusFmt = "  ~-10s ~-12s (~p)\n",
+    History = [io_lib:format(StatusFmt, [T, S, R])
+               || {T, S, R} <- history(Status, Info)],
+    KeywordsStrs =
+        if Keywords == [] -> "";
+           true ->
+                io_lib:format("  ~-10s ~p\n", ["Keywords", Keywords])
+        end,
+    Lines = [{"~s - ~s\n", [Feature, Short]},
+             {"  ~-10s ~s\n", ["Type", Type]},
+             {"~s", [History]},
+             {"~s", [KeywordsStrs]},
+             {"\n~s\n", [nqTeX(Description)]}],
+    [io_lib:format(FStr, Args) || {FStr, Args} <- Lines].
+
+history(Current, Info) ->
+    G = fun(Key, S) ->
+                case maps:find(Key, Info) of
+                    error -> [];
+                    {ok, R} -> [{S, Key, R}]
+                end
+        end,
+    F = fun(Key) -> G(Key, "") end,
+    History =
+        case Current of
+            experimental -> [];
+            rejected -> F(experimental);
+            approved -> F(experimental);
+            permanent -> F(approved) ++ F(experimental)
+        end,
+    G(Current, "Status") ++ History.
+
+%% Dead simple line breaking for better presentation.
+nqTeX(String) ->
+    Words = string:tokens(String, " "),
+    WithLens = lists:map(fun(W) -> {W, length(W)} end, Words),
+    adjust(WithLens).
+
+adjust(WLs) ->
+    adjust(0, WLs, []).
+
+adjust(_, [], Ws) ->
+    lists:reverse(tl(Ws));
+adjust(Col, [{W, L}| WLs], Ws) ->
+    case Col + L > 72 of
+        true ->
+            lists:reverse(["\n"| tl(Ws)])
+                ++ adjust(L+1, WLs, [" ", W]);
+        false ->
+            adjust(Col + L + 1, WLs, [" ", W| Ws])
+    end.
+
 
 -spec feature_info(atom()) -> FeatureInfoMap
               when
