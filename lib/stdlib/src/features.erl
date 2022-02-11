@@ -78,8 +78,8 @@ long(Feature) ->
     #{short := Short,
       description := Description,
       status := Status,
+      keywords := Keywords,
       type := Type} = Info = feature_info(Feature),
-    Keywords = reserved_words(Feature),
     StatusFmt = "  ~-10s ~-12s (~p)\n",
     History = [io_lib:format(StatusFmt, [T, S, R])
                || {T, S, R} <- history(Status, Info)],
@@ -156,6 +156,7 @@ feature_info(ifn_expr) ->
       "Implementated by a transformation in the parser.",
       status => experimental,
       experimental => 24,
+      keywords => ['ifn'],
       type => extension};
 feature_info(ifnot_expr) ->
     #{short => "New expression `ifnot cond -> body end`",
@@ -167,6 +168,7 @@ feature_info(ifnot_expr) ->
       "Similar to ifn_expr, but with a deeper implementation.",
       status => experimental,
       experimental => 25,
+      keywords => ['ifnot'],
       type => extension};
 feature_info(maybe_expr) ->
     #{short => "Value based error handling (EEP49)",
@@ -175,6 +177,7 @@ feature_info(maybe_expr) ->
       "Value based error handling.",
       status => experimental,
       experimental => 25,
+      keywords => ['maybe', 'else'],
       type => extension};
 feature_info(unless_expr) ->
     #{short => "`unless <cond> -> <body> end",
@@ -183,6 +186,7 @@ feature_info(unless_expr) ->
       " Truly experimental.",
       status => experimental,
       experimental => 25,
+      keywords => ['unless'],
       type => extension};
 feature_info(maps) ->
     #{short => "Add maps as new data type",
@@ -193,6 +197,7 @@ feature_info(maps) ->
       experimental => 17,
       approved => 18,
       permanent => 19,
+      keywords => [],
       type => extension};
 feature_info(cond_expr) ->
     #{short => "Introduce general Lisp style conditional",
@@ -202,6 +207,7 @@ feature_info(cond_expr) ->
       status => approved,
       experimental => 24,
       approved => 25,
+      keywords => [],
       type => extension};
 feature_info(Ftr) ->
     ?VALID_FEATURE(Ftr).
@@ -209,18 +215,11 @@ feature_info(Ftr) ->
 %% New reserved words for a feature.  The current set is just for
 %% tests and development.
 -spec reserved_words(atom()) -> [atom()].
-reserved_words(ifn_expr) ->
-    ['ifn'];
-reserved_words(maybe_expr) ->
-    ['maybe', 'else'];
-reserved_words(ifnot_expr) ->
-    ['ifnot'];
-reserved_words(unless_expr) ->
-    ['unless'];
-reserved_words(maps) -> [];
-reserved_words(cond_expr) -> [];
 reserved_words(Ftr) ->
-    ?VALID_FEATURE(Ftr).
+    ?VALID_FEATURE(Ftr),
+
+    #{keywords := Keywords} = feature_info(Ftr),
+    Keywords.
 
 %% Utilities
 -spec resword_add_feature(atom(), fun((atom()) -> boolean())) ->
