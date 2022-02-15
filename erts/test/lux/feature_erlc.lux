@@ -191,9 +191,10 @@
     ??{error,not_allowed}
     ?$ERLPROMPT
 
-    !features:features_used(f_maybe_ifn).
-    # Order not defined
-    ???[ifn_expr,maybe_expr]
+    !Fs = features:features_used(f_maybe_ifn).
+    [invoke same-members Fs "[cond_expr,maps,maybe_expr,ifn_expr]"]
+    !f(Fs).
+    ?$ERLPROMPT
 
     # Try to load the binary directly
     !{Mod,Bin,FName}=code:get_object_code(f_maybe_ifn).
@@ -243,14 +244,18 @@
     ?$ERLPROMPT
 
     # Check which features were used during compilation
-    !features:features_used(f_macros).
-    ???[ifn_expr]
+    !Fs = features:features_used(f_macros).
+    ?$ERLPROMPT
+    [invoke same-members Fs "[maps,cond_expr,ifn_expr]"]
+    !f(Fs).
     ?$ERLPROMPT
 
     # Somewhat questionable if we really should allow this in runtime
     # FIXME WE should *not* allow this at runtime.
-    !features:enable_feature(ifn_expr).
-    ??[ifn_expr]
+    !Fs = features:enable_feature(ifn_expr).
+    ?$ERLPROMPT
+    [invoke same-members Fs "[cond_expr,maps,ifn_expr]"]
+    !f(Fs).
     ?$ERLPROMPT
 
     !l(f_macros).
@@ -299,12 +304,18 @@
     [invoke ok]
 
 [shell erl]
-    !features:enable_feature(ifn_expr).
-    ??[ifn_expr]
+    # FIXME This should not be allowed at runtime..
+    !Fs = features:enable_feature(ifn_expr).
+    ?$ERLPROMPT
+    [invoke same-members Fs "[cond_expr,maps,ifn_expr]"]
+    !f(Fs).
     ?$ERLPROMPT
 
-    !features:enable_feature(maybe_expr).
-    ??[maybe_expr,ifn_expr]
+    # FIXME This should not be allowed at runtime..
+    !Fs = features:enable_feature(maybe_expr).
+    ?$ERLPROMPT
+    [invoke same-members Fs "[cond_expr,maps,ifn_expr,maybe_expr]"]
+    !f(Fs).
     ?$ERLPROMPT
 
     !l(f_macros).
@@ -397,6 +408,33 @@
     # Expect no warning
     -Warning
     [invoke ok]
+
+[shell cmds]
+    [invoke compile foo.erl "-enable-feature all"]
+    [invoke ok]
+
+[shell erl]
+    !Fs = features:features_used(foo).
+    ?$ERLPROMPT
+    [invoke same-members Fs "[unless_expr,ifn_expr,maybe_expr,cond_expr,maps,ifnot_expr]"]
+    !f(Fs).
+    ?$ERLPROMPT
+    # !maps:from_keys([unless_expr,ifn_expr,maybe_expr,cond_expr,maps,ifnot_expr],true) == maps:from_keys(Fs, true).
+    # ?true
+    # ?$ERLPROMPT
+
+[shell cmds]
+    [invoke compile foo.erl "-enable-feature all -disable-feature unless_expr"]
+    [invoke ok]
+
+[shell erl]
+    !Fs = features:features_used(foo).
+    ?$ERLPROMPT
+    !maps:from_keys([ifn_expr,maybe_expr,cond_expr,maps,ifnot_expr], true) == maps:from_keys(Fs, true).
+    ?true
+    ?$ERLPROMPT
+    !f(Fs).
+    ?$ERLPROMPT
 
 [cleanup]
     !rm -fr $outdir

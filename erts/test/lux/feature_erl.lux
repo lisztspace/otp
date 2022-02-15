@@ -7,72 +7,59 @@
 [newshell erl]
     [invoke start-erl ""]
 
-    !features:enabled_features().
-    ??[]
-    ?$ERLPROMPT
+    [invoke same-members "features:enabled_features()" "[maps,cond_expr]"]
 
     [invoke quit-erl]
 
     [invoke start-erl "-enable-feature ifn_expr"]
 
-    !features:enabled_features().
-    ??[ifn_expr]
-    ?$ERLPROMPT
+    [invoke same-members "features:enabled_features()" "[maps,cond_expr,ifn_expr]"]
 
     [invoke quit-erl]
 
     [invoke start-erl "-enable-feature ifn_expr -enable-feature maybe_expr"]
 
-    !features:enabled_features().
-    # We know that new features are pushed
-    ??[maybe_expr,ifn_expr]
-    ?$ERLPROMPT
+    [invoke same-members "features:enabled_features()" "[maps,cond_expr,maybe_expr,ifn_expr]"]
 
     [invoke quit-erl]
 
 
     [invoke start-erl "-enable-feature ifn_expr maybe_expr"]
 
-    !features:enabled_features().
-    # We know that new features are pushed
-    ??[maybe_expr,ifn_expr]
-    ?$ERLPROMPT
+    [invoke same-members "features:enabled_features()" "[cond_expr,maps,maybe_expr,ifn_expr]"]
 
     [invoke quit-erl]
 
     [invoke start-erl "-enable-feature ifn_expr maybe_expr -enable-feature ifnot_expr"]
 
-    !features:enabled_features().
-    # We know that new features are pushed
-    ??[ifnot_expr,maybe_expr,ifn_expr]
-    ?$ERLPROMPT
+    [invoke same-members "features:enabled_features()" "[cond_expr,maps,maybe_expr,ifn_expr,ifnot_expr]"]
 
     [invoke quit-erl]
 
     # Enabling the same feature twice does not hurt
     [invoke start-erl "-enable-feature ifn_expr maybe_expr -enable-feature ifnot_expr ifn_expr"]
 
-    !features:enabled_features().
-    # We know that new features are pushed
-    ??[ifnot_expr,maybe_expr,ifn_expr]
-    ?$ERLPROMPT
+    [invoke same-members "features:enabled_features()" "[cond_expr,maps,maybe_expr,ifn_expr,ifnot_expr]"]
 
     [invoke quit-erl]
 
     # Now for some bad stuff
     # Enabling a feature that doen't exist
-    # FIXME shouldn't this give an error?
+    # FIXME shouldn't this give an error?  Yes, but here we have a
+    # problem since we have a lazy init of the feature set.
     [invoke start-erl "-enable-feature no_ftr"]
 
-    !features:enabled_features().
-    ??[]
-    ?$ERLPROMPT
+    [invoke same-members "features:enabled_features()" "[cond_expr,maps]"]
 
     [invoke quit-erl]
 
-    # Enabling a feature that doen't exist
-    [invoke start-erl "-enable-feature no_ftr"]
+    [invoke start-erl "-disable-feature cond_expr"]
 
+    [invoke same-members "features:enabled_features()" "[maps]"]
+    # FIXME Need to check that keywords have changed as well!
+    [invoke quit-erl]
+
+    [invoke start-erl "-disable-feature all"]
     !features:enabled_features().
     ??[]
     ?$ERLPROMPT

@@ -19,13 +19,9 @@
 
     # Output should should know about the new reserved words during runtime
 
-    !features:enable_feature(maybe_expr).
-    ??[maybe_expr]
-    ?$ERLPROMPT
+    [invoke same-members "features:enable_feature(maybe_expr)" "[cond_expr,maps,maybe_expr]"]
 
-    !features:enable_feature(ifn_expr).
-    ??[ifn_expr,maybe_expr]
-    ?$ERLPROMPT
+    [invoke same-members "features:enable_feature(ifn_expr)" "[cond_expr,maps,maybe_expr,ifn_expr]"]
 
     !l(feature_directive_maybe_ifn).
     ??{module,feature_directive_maybe_ifn}

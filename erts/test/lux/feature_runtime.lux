@@ -8,60 +8,42 @@
     !erl
     ?$ERLPROMPT
 
-    !features:enabled_features().
-    ??[]
-    ?$ERLPROMPT
+    [invoke same-members "features:enabled_features()" "[cond_expr,maps]"]
 
     !features:keywords().
     ??[]
     ?$ERLPROMPT
 
-    !features:enable_feature(maybe_expr).
-    ??[maybe_expr]
-    ?$ERLPROMPT
+    [invoke same-members "features:enable_feature(maybe_expr)" "[cond_expr,maps,maybe_expr]"]
 
     !features:keywords().
     ??['maybe','else']
     ?$ERLPROMPT
 
-    !features:disable_feature(maybe_expr).
-    ??[]
-    ?$ERLPROMPT
+    [invoke same-members "features:disable_feature(maybe_expr)" "[cond_expr,maps]"]
 
     !features:keywords().
     ??[]
     ?$ERLPROMPT
 
-    !features:enable_feature(ifn_expr).
-    ??[ifn_expr]
-    ?$ERLPROMPT
+    [invoke same-members "features:enable_feature(ifn_expr)" "[cond_expr,maps,ifn_expr]"]
 
-    !features:enable_feature(maybe_expr).
-    ??[maybe_expr,ifn_expr]
-    ?$ERLPROMPT
+    [invoke same-members "features:enable_feature(maybe_expr)" "[cond_expr,maps,ifn_expr,maybe_expr]"]
 
-    !features:enabled_features().
-    ??[maybe_expr,ifn_expr]
-    ?$ERLPROMPT
+    [invoke same-members "features:enabled_features()" "[cond_expr,maps,ifn_expr,maybe_expr]"]
 
     !features:keywords().
     ??['maybe','else','ifn']
 
-    !features:disable_feature(ifn_expr).
-    ??[maybe_expr]
-    ?$ERLPROMPT
+    [invoke same-members "features:disable_feature(ifn_expr)" "[cond_expr,maps,maybe_expr]"]
 
-    !features:enabled_features().
-    ??[maybe_expr]
-    ?$ERLPROMPT
+    [invoke same-members "features:enabled_features()" "[cond_expr,maps,maybe_expr]"]
 
     !features:keywords().
     ??['maybe','else']
     ?$ERLPROMPT
 
-    !features:disable_feature(maybe_expr).
-    ??[]
-    ?$ERLPROMPT
+    [invoke same-members "features:disable_feature(maybe_expr)" "[cond_expr,maps]"]
 
     !features:keywords().
     ??[]

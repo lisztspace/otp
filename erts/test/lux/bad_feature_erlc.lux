@@ -80,7 +80,7 @@
 
     [invoke compile f_ifn.erl "-enable-feature maybe -enable-feature ifn"]
     # FIXME Fix order!
-    ??the features 'ifn' and 'maybe' do not exist
+    ??the features 'maybe' and 'ifn' do not exist
     ?SH-PROMPT:
     [invoke notok]
 
@@ -113,13 +113,14 @@
     [invoke notok]
 
     [invoke compile f_maybe.erl "-enable-feature maybe -enable-feature ifn"]
-    ??the features 'ifn' and 'maybe' do not exist
+    # FIXE fix order
+    ??the features 'maybe' and 'ifn' do not exist
     ?SH-PROMPT:
     [invoke notok]
 
     [invoke compile f_maybe.erl "-enable-feature maybe -enable-feature ifn -enable-feature unless"]
     # FIXME fix order
-    ??the features 'unless', 'ifn' and 'maybe' do not exist
+    ??the features 'maybe', 'ifn' and 'unless' do not exist
     ?SH-PROMPT:
     [invoke notok]
 
@@ -180,13 +181,17 @@
 
 [shell erl]
     # Verify that only ifn_expr is used
-    !features:features_used(f_directives_2).
-    ??[ifn_expr]
+    !Fs = features:features_used(f_directives_2).
+    ?$ERLPROMPT
+    [invoke same-members Fs "[ifn_expr,cond_expr,maps]"]
+    !f(Fs).
     ?$ERLPROMPT
 
     # Verify that only ifn_expr is used
-    !features:features_used(f_directives_3).
-    ??[ifn_expr]
+    !Fs = features:features_used(f_directives_3).
+    ?$ERLPROMPT
+    [invoke same-members Fs "[ifn_expr,cond_expr,maps]"]
+    !f(Fs).
     ?$ERLPROMPT
 
     !l(f_macros).
