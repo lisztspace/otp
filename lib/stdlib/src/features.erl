@@ -336,8 +336,8 @@ format_error({invalid_features, Features}) ->
 %% This is almost static, so we go for an almost permanent state,
 %% i.e., use persistent_term.
 init_features() ->
-    persistent_term:put(enabled_features, []),
-    persistent_term:put(keywords, []),
+    persistent_term:put({?MODULE, enabled_features}, []),
+    persistent_term:put({?MODULE, keywords}, []),
 
     RawOps = lists:filter(fun({Tag, _}) ->
                                       Tag == 'enable-feature'
@@ -435,17 +435,17 @@ disable_feature(Feature) ->
 
 enabled_features() ->
     ensure_init(),
-    persistent_term:get(enabled_features).
+    persistent_term:get({?MODULE, enabled_features}).
 
 enabled_features(Ftrs) ->
-    persistent_term:put(enabled_features, Ftrs).
+    persistent_term:put({?MODULE, enabled_features}, Ftrs).
 
 keywords() ->
     ensure_init(),
-    persistent_term:get(keywords).
+    persistent_term:get({?MODULE, keywords}).
 
 set_keywords(Words) ->
-    persistent_term:put(keywords, Words).
+    persistent_term:put({?MODULE, keywords}, Words).
 
 
 -spec load_allowed(binary()) -> boolean().
