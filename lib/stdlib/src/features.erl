@@ -27,12 +27,10 @@
          enabled_features/0,
          is_valid_feature/1,
          load_allowed/1,
-         reserved_words/0,
-         reserved_words/1,
-         resword_add_feature/2,
-         resword_add_features/2,
-         resword_remove_feature/2,
-         resword_remove_features/2,
+         keywords/0,
+         keywords/1,
+         keyword_fun/2,
+         keyword_fun/4,
          enable_feature/1,
          disable_feature/1,
          format_error/1,
@@ -213,36 +211,75 @@ feature_info(cond_expr) ->
 feature_info(Ftr) ->
     ?VALID_FEATURE(Ftr).
 
-%% New reserved words for a feature.  The current set is just for
+%% New keywords for a feature.  The current set is just for
 %% tests and development.
--spec reserved_words(atom()) -> [atom()].
-reserved_words(Ftr) ->
+-spec keywords(atom()) -> [atom()].
+keywords(Ftr) ->
     ?VALID_FEATURE(Ftr),
 
     #{keywords := Keywords} = feature_info(Ftr),
     Keywords.
 
 %% Utilities
--spec resword_add_feature(atom(), fun((atom()) -> boolean())) ->
-          {'ok', fun((atom()) -> boolean())}
-              | {'error', error()}.
-resword_add_feature(Feature, F) ->
+%% Returns list of enabled features and a new keywords function
+%% -spec keyword_fun_add_feature(atom(), fun((atom()) -> boolean())) ->
+%%           {'ok', fun((atom()) -> boolean())}
+%%               | {'error', error()}.
+keyword_fun(Opts, KeywordFun) ->
+    %% Get items enabling or disabling features, preserving order.
+    IsFtr = fun({enable_feature, _}) -> true;
+               ({disable_feature, _}) -> true;
+               (_) -> false
+            end,
+    FeatureOps = lists:filter(IsFtr, Opts),
+    {AddFeatures, DelFeatures} = collect_features(FeatureOps),
+    %% FIXME check that all features are known at this stage so we
+    %% don't miss out on reporting any unknown features.
+
+    case keyword_fun_add_features(AddFeatures, KeywordFun) of
+        {ok, Fun} ->
+            case keyword_fun_remove_features(DelFeatures, Fun) of
+                {ok, FunX} ->
+                    {ok, {AddFeatures -- DelFeatures, FunX}};
+                {error, _} = Error ->
+                    %% FIXME We are missing potential incorrect
+                    %% features being disabled
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+
+%% -spec keyword_fun_add_feature(atom(), fun((atom()) -> boolean())) ->
+%%           {'ok', fun((atom()) -> boolean())}
+%%               | {'error', error()}.
+keyword_fun(Ind, Feature, Ftrs, KeywordFun) ->
     case is_valid_feature(Feature) of
         true ->
-            {ok, add_feature(Feature, F)};
+            case Ind of
+                enable ->
+                    {ok,
+                     add_feature(Feature, KeywordFun),
+                     [Feature | Ftrs]};
+                disable ->
+                    {ok,
+                     remove_feature(Feature, KeywordFun),
+                     Ftrs -- [Feature]}
+            end;
         false ->
             {error, {?MODULE, {invalid_features, [Feature]}}}
     end.
 
+%% FIXME Rename this to reflect that it returns a function!
 add_feature(Feature, F) ->
-    Words = reserved_words(Feature),
+    Words = keywords(Feature),
     fun(Word) ->
             lists:member(Word, Words)
                 orelse F(Word)
     end.
 
 remove_feature(Feature, F) ->
-    Words = reserved_words(Feature),
+    Words = keywords(Feature),
     fun(Word) ->
             case lists:member(Word, Words) of
                 true -> false;
@@ -250,21 +287,10 @@ remove_feature(Feature, F) ->
             end
     end.
 
--spec resword_remove_feature(atom(), fun((atom()) -> boolean())) ->
+-spec keyword_fun_add_features([atom()], fun((atom()) -> boolean())) ->
           {'ok', fun((atom()) -> boolean())}
               | {'error', error()}.
-resword_remove_feature(Feature, F) ->
-    case is_valid_feature(Feature) of
-        true ->
-            {ok, remove_feature(Feature, F)};
-        false ->
-            {error, {?MODULE, {invalid_features, [Feature]}}}
-    end.
-
--spec resword_add_features([atom()], fun((atom()) -> boolean())) ->
-          {'ok', fun((atom()) -> boolean())}
-              | {'error', error()}.
-resword_add_features(Features, F) ->
+keyword_fun_add_features(Features, F) ->
     case lists:all(fun is_valid_feature/1, Features) of
         true ->
             {ok, lists:foldl(fun add_feature/2, F, Features)};
@@ -274,10 +300,10 @@ resword_add_features(Features, F) ->
             {error, {?MODULE, {invalid_features, Invalid}}}
     end.
 
--spec resword_remove_features([atom()], fun((atom()) -> boolean())) ->
+-spec keyword_fun_remove_features([atom()], fun((atom()) -> boolean())) ->
           {'ok', fun((atom()) -> boolean())}
               | {'error', error()}.
-resword_remove_features(Features, F) ->
+keyword_fun_remove_features(Features, F) ->
     case lists:all(fun is_valid_feature/1, Features) of
         true ->
             {ok, lists:foldl(fun remove_feature/2, F, Features)};
@@ -311,7 +337,7 @@ format_error({invalid_features, Features}) ->
 %% i.e., use persistent_term.
 init_features() ->
     persistent_term:put(enabled_features, []),
-    persistent_term:put(reserved_words, []),
+    persistent_term:put(keywords, []),
 
     RawOps = lists:filter(fun({Tag, _}) ->
                                       Tag == 'enable-feature'
@@ -356,13 +382,13 @@ init_features() ->
                                     {Features, Keys};
                                 false ->
                                     {[Ftr| Features],
-                                     reserved_words(Ftr) ++ Keys}
+                                     keywords(Ftr) ++ Keys}
                             end
                     end,
                     {[], []},
                     FeaturesX),
     enabled_features(Enabled),
-    set_reserved_words(Keywords),
+    set_keywords(Keywords),
     persistent_term:put({?MODULE, init_done}, true),
     ok.
 
@@ -384,9 +410,9 @@ enable_feature(Feature) ->
         false ->
             NewFeatures = [Feature| Features],
             enabled_features(NewFeatures),
-            Res = reserved_words(),
-            New = reserved_words(Feature),
-            set_reserved_words(New ++ Res),
+            Keywords = keywords(),
+            New = keywords(Feature),
+            set_keywords(New ++ Keywords),
             NewFeatures
     end.
 
@@ -398,9 +424,9 @@ disable_feature(Feature) ->
         true ->
             NewFeatures = Features -- [Feature],
             enabled_features(NewFeatures),
-            Res = reserved_words(),
-            Rem = reserved_words(Feature),
-            set_reserved_words(Res -- Rem),
+            Keywords = keywords(),
+            Rem = keywords(Feature),
+            set_keywords(Keywords -- Rem),
             NewFeatures;
         false ->
             %% Not there, possibly raise an error
@@ -414,12 +440,12 @@ enabled_features() ->
 enabled_features(Ftrs) ->
     persistent_term:put(enabled_features, Ftrs).
 
-reserved_words() ->
+keywords() ->
     ensure_init(),
-    persistent_term:get(reserved_words).
+    persistent_term:get(keywords).
 
-set_reserved_words(Words) ->
-    persistent_term:put(reserved_words, Words).
+set_keywords(Words) ->
+    persistent_term:put(keywords, Words).
 
 
 -spec load_allowed(binary()) -> boolean().
