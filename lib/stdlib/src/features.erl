@@ -21,6 +21,7 @@
 
 -export([features/0,
          feature_info/1,
+         collect_features/1,
          short/1,
          long/1,
          enabled_features/0,
@@ -312,39 +313,56 @@ init_features() ->
     persistent_term:put(enabled_features, []),
     persistent_term:put(reserved_words, []),
 
-    case init:get_argument('enable-feature') of
-        error ->
-            %% no features enabled
-            ok;
-        {ok, Ftrs} ->
-            %% Convert failure, e.g., too long string for atom, to not
-            %% being a valid feature.
-            F = fun(String) ->
-                        try
-                            Atom = list_to_atom(String),
-                            case is_valid_feature(Atom) of
-                                true -> {true, Atom};
-                                false -> false
+    RawOps = lists:filter(fun({Tag, _}) ->
+                                      Tag == 'enable-feature'
+                                          orelse Tag == 'disable-feature';
+                                 (_) -> false
+                              end,
+                              init:get_arguments()),
+
+    Cnv = fun('enable-feature') -> enable_feature;
+             ('disable-feature') -> disable_feature
+          end,
+
+    FeatureOps = lists:append(lists:map(fun({Tag, Strings}) ->
+                                                lists:map(fun(S) ->
+                                                                  {Tag, S} end,
+                                                          Strings)
+                                        end,
+                                        RawOps)),
+
+    %% Convert failure, e.g., too long string for atom, to not
+    %% being a valid feature.
+    F = fun({Tag, String}) ->
+                try
+                    Atom = list_to_atom(String),
+                    case is_valid_feature(Atom) of
+                        true -> {true, {Cnv(Tag), Atom}};
+                        false when Atom == all ->
+                            {true, {Cnv(Tag), Atom}};
+                        false -> false
+                    end
+                catch
+                    _ -> false
+                end
+        end,
+    FOps = lists:filtermap(F, FeatureOps),
+    {FeaturesX, _} =
+        collect_features(FOps),
+    {Enabled, Keywords} =
+        lists:foldl(fun(Ftr, {Features, Keys}) ->
+                            case lists:member(Ftr, Features) of
+                                true ->
+                                    {Features, Keys};
+                                false ->
+                                    {[Ftr| Features],
+                                     reserved_words(Ftr) ++ Keys}
                             end
-                        catch
-                            _ -> false
-                        end
-                end,
-            {Enabled, Keywords} =
-                lists:foldl(fun(Ftr, {Features, Keys}) ->
-                                    case lists:member(Ftr, Features) of
-                                        true ->
-                                            {Features, Keys};
-                                        false ->
-                                            {[Ftr| Features],
-                                             reserved_words(Ftr) ++ Keys}
-                                    end
-                            end,
-                            {[], []},
-                            lists:filtermap(F, lists:append(Ftrs))),
-            enabled_features(Enabled),
-            set_reserved_words(Keywords)
-    end,
+                    end,
+                    {[], []},
+                    FeaturesX),
+    enabled_features(Enabled),
+    set_reserved_words(Keywords),
     persistent_term:put({?MODULE, init_done}, true),
     ok.
 
@@ -445,3 +463,42 @@ features_in(NameOrBin) ->
         _ ->
             not_found
     end.
+
+approved_features() ->
+    [Ftr || Ftr <- features(),
+            maps:get(status, feature_info(Ftr)) == approved].
+
+permanent_features() ->
+    [Ftr || Ftr <- features(),
+            maps:get(status, feature_info(Ftr)) == permanent].
+
+%% Interpret feature ops (enable or disable) to build the full set of
+%% features.  The meta feature 'all' is expanded to all known
+%% features.
+collect_features(FOps) ->
+    %% Features enabled by default
+    Enabled = approved_features() ++ permanent_features(),
+    collect_features(FOps, Enabled, []).
+
+collect_features([], Add, Del) ->
+    {Add, Del};
+collect_features([{enable_feature, all}| FOps], Add, _Del) ->
+    All = features:features(),
+    Add1 = lists:foldl(fun add_ftr/2, Add, All),
+    collect_features(FOps, Add1, []);
+collect_features([{enable_feature, Feature}| FOps], Add, Del) ->
+    collect_features(FOps, add_ftr(Feature, Add), Del -- [Feature]);
+collect_features([{disable_feature, all}| FOps], _Add, Del) ->
+    %% Start over
+    All = features:features(),
+    collect_features(FOps, [], Del -- All);
+collect_features([{disable_feature, Feature}| FOps], Add, Del) ->
+    collect_features(FOps, Add -- [Feature],
+                     add_ftr(Feature, Del)).
+
+add_ftr(F, []) ->
+    [F];
+add_ftr(F, [F| _] = Fs) ->
+    Fs;
+add_ftr(F, [F0| Fs]) ->
+    [F0| add_ftr(F, Fs)].

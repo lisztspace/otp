@@ -1078,17 +1078,15 @@ metadata_add_features(Ftrs, #compile{extra_chunks = Extra} = St) ->
     St#compile{extra_chunks = Extra1}.
 
 %% Returns list of enabled features and a new reserved words function
+%% FIXME Move most of this code into the features module!
 make_reserved_word_fun(Opts) ->
-    AddFeatures = lists:filtermap(fun({enable_feature, Ftr}) ->
-                                          {true, Ftr};
-                                     (_) -> false
-                                  end,
-                                  Opts),
-    DelFeatures = lists:filtermap(fun({disable_feature, Ftr}) ->
-                                          {true, Ftr};
-                                     (_) -> false
-                                  end,
-                                  Opts),
+    %% Get items enabling or disabling features, preserving order.
+    IsFtr = fun({enable_feature, _}) -> true;
+               ({disable_feature, _}) -> true;
+               (_) -> false
+            end,
+    FeatureOps = lists:filter(IsFtr, Opts),
+    {AddFeatures, DelFeatures} = features:collect_features(FeatureOps),
     %% FIXME check that all features are known at this stage so we
     %% don't miss out on reporting any unknown features.
 
