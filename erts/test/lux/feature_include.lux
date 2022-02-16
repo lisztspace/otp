@@ -37,5 +37,42 @@
     ?feature directive not allowed after anything interesting
     [invoke notok]
 
+[shell cmds]
+    [invoke compile f_include_maybe.erl "-Denable_maybe=0"]
+    [invoke ok]
+
+[shell erl]
+    !l(f_include_maybe).
+    ??{module,f_include_maybe}
+    ?$ERLPROMPT
+    !f_include_maybe:foo().
+    ??{conditional,on,else}
+    ?$ERLPROMPT
+
+[shell cmds]
+    [invoke compile f_include_maybe.erl "-enable-feature maybe_expr"]
+    ??input/maybe.hrl
+    ??syntax error before
+    [invoke notok]
+
+    [invoke compile f_include_maybe.erl "-Denable_maybe=1"]
+    ??input/f_include_maybe.erl
+    ??syntax error before
+    [invoke notok]
+
+    [invoke compile f_include_maybe.erl "-enable-feature maybe_expr -Denable_maybe=2"]
+    [invoke ok]
+
+[shell erl]
+    [invoke quit-erl]
+
+    [invoke start-erl "-enable-feature maybe_expr"]
+    !l(f_include_maybe).
+    ??{module,f_include_maybe}
+    ?$ERLPROMPT
+    !f_include_maybe:foo().
+    ??{conditional,off,none}
+    ?$ERLPROMPT
+
 [cleanup]
     # done
