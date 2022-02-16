@@ -786,6 +786,7 @@ enter_file2(NewF, Pname, From, St0, AtLocation) ->
          default_encoding = DefEncoding,
          in_prefix = InPrefix,
          erl_scan_opts = ScanOpts,
+         else_reserved = ElseReserved,
          features = Ftrs} = St0,
     Ms = Ms0#{'FILE':={none,[{string,Anno,Pname}]}},
     %% update the head of the include path to be the directory of the new
@@ -801,6 +802,7 @@ enter_file2(NewF, Pname, From, St0, AtLocation) ->
          in_prefix = InPrefix,
          features = Ftrs,
          erl_scan_opts = ScanOpts,
+         else_reserved = ElseReserved,
          default_encoding=DefEncoding}.
 
 enter_file_reply(From, Name, LocationAnno, AtLocation, Where) ->
@@ -844,11 +846,13 @@ leave_file(From, St) ->
 		    Ms0 = St#epp.macs,
                     InPrefix = St#epp.in_prefix,
                     Ftrs = St#epp.features,
+                    ElseReserved = St#epp.else_reserved,
                     ScanOpts = St#epp.erl_scan_opts,
 		    Ms = Ms0#{'FILE':={none,[{string,Anno,OldName2}]}},
                     NextSt = OldSt#epp{sstk=Sts,macs=Ms,uses=St#epp.uses,
                                        in_prefix = InPrefix,
                                        features = Ftrs,
+                                       else_reserved = ElseReserved,
                                        erl_scan_opts = ScanOpts},
 		    enter_file_reply(From, OldName, Anno, CurrLoc, code),
                     case OldName2 =:= OldName of
