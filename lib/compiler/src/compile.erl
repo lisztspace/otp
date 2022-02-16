@@ -1018,7 +1018,7 @@ do_parse_module(DefEncoding, #compile{ifile=File,options=Opts,dir=Dir}=St) ->
                         false ->
                             1
                     end,
-    case make_reserved_word_fun(Opts) of
+    case erl_features:keyword_fun(Opts, fun erl_scan:f_reserved_word/1) of
         {ok, {Features, ResWordFun}} ->
             R = epp:parse_file(File,
                                [{includes,[".",Dir|inc_paths(Opts)]},
@@ -1076,34 +1076,6 @@ metadata_add_features(Ftrs, #compile{extra_chunks = Extra} = St) ->
                                          erlang:term_to_binary(MetaData1),
                                          proplists:to_map(Extra))),
     St#compile{extra_chunks = Extra1}.
-
-%% Returns list of enabled features and a new reserved words function
-%% FIXME Move most of this code into the features module!
-make_reserved_word_fun(Opts) ->
-    %% Get items enabling or disabling features, preserving order.
-    IsFtr = fun({enable_feature, _}) -> true;
-               ({disable_feature, _}) -> true;
-               (_) -> false
-            end,
-    FeatureOps = lists:filter(IsFtr, Opts),
-    {AddFeatures, DelFeatures} = features:collect_features(FeatureOps),
-    %% FIXME check that all features are known at this stage so we
-    %% don't miss out on reporting any unknown features.
-
-    case features:resword_add_features(AddFeatures,
-                                       fun erl_scan:f_reserved_word/1) of
-        {ok, Fun} ->
-            case features:resword_remove_features(DelFeatures, Fun) of
-                {ok, FunX} ->
-                    {ok, {AddFeatures -- DelFeatures, FunX}};
-                {error, _} = Error ->
-                    %% FIXME We are missing potential incorrect
-                    %% features being disabled
-                    Error
-            end;
-        {error, _} = Error ->
-            Error
-    end.
 
 with_columns(Opts) ->
     case proplists:get_value(error_location, Opts, column) of
