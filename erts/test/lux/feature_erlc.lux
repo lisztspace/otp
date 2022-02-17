@@ -162,6 +162,7 @@
     [invoke ok]
 
 [newshell erl]
+    -undefined function
     [invoke start-erl ""]
     [invoke erl-compile ignorant.erl []]
     ???{ok,ignorant}
@@ -191,7 +192,7 @@
     ??{error,not_allowed}
     ?$ERLPROMPT
 
-    !Fs = features:features_used(f_maybe_ifn).
+    !Fs = erl_features:features_used(f_maybe_ifn).
     [invoke same-members Fs "[cond_expr,maps,maybe_expr,ifn_expr]"]
     !f(Fs).
     ?$ERLPROMPT
@@ -244,7 +245,7 @@
     ?$ERLPROMPT
 
     # Check which features were used during compilation
-    !Fs = features:features_used(f_macros).
+    !Fs = erl_features:features_used(f_macros).
     ?$ERLPROMPT
     [invoke same-members Fs "[maps,cond_expr,ifn_expr]"]
     !f(Fs).
@@ -252,7 +253,7 @@
 
     # Somewhat questionable if we really should allow this in runtime
     # FIXME WE should *not* allow this at runtime.
-    !Fs = features:enable_feature(ifn_expr).
+    !Fs = erl_features:enable_feature(ifn_expr).
     ?$ERLPROMPT
     [invoke same-members Fs "[cond_expr,maps,ifn_expr]"]
     !f(Fs).
@@ -305,14 +306,14 @@
 
 [shell erl]
     # FIXME This should not be allowed at runtime..
-    !Fs = features:enable_feature(ifn_expr).
+    !Fs = erl_features:enable_feature(ifn_expr).
     ?$ERLPROMPT
     [invoke same-members Fs "[cond_expr,maps,ifn_expr]"]
     !f(Fs).
     ?$ERLPROMPT
 
     # FIXME This should not be allowed at runtime..
-    !Fs = features:enable_feature(maybe_expr).
+    !Fs = erl_features:enable_feature(maybe_expr).
     ?$ERLPROMPT
     [invoke same-members Fs "[cond_expr,maps,ifn_expr,maybe_expr]"]
     !f(Fs).
@@ -414,7 +415,7 @@
     [invoke ok]
 
 [shell erl]
-    !Fs = features:features_used(foo).
+    !Fs = erl_features:features_used(foo).
     ?$ERLPROMPT
     [invoke same-members Fs "[unless_expr,ifn_expr,maybe_expr,cond_expr,maps,ifnot_expr]"]
     !f(Fs).
@@ -428,9 +429,9 @@
     [invoke ok]
 
 [shell erl]
-    !Fs = features:features_used(foo).
+    !Fs = erl_features:features_used(foo).
     ?$ERLPROMPT
-    !maps:from_keys([ifn_expr,maybe_expr,cond_expr,maps,ifnot_expr], true) == maps:from_keys(Fs, true).
+    !maps:from_keys([ifn_expr,maybe_expr,cond_expr,maps,ifnot_expr], foo) == maps:from_keys(Fs, foo).
     ?true
     ?$ERLPROMPT
     !f(Fs).

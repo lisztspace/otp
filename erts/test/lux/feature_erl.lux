@@ -5,41 +5,42 @@
 [invoke setup]
 
 [newshell erl]
+    -undefined function
     [invoke start-erl ""]
 
-    [invoke same-members "features:enabled_features()" "[maps,cond_expr]"]
+    [invoke same-members "erl_features:enabled_features()" "[maps,cond_expr]"]
 
     [invoke quit-erl]
 
     [invoke start-erl "-enable-feature ifn_expr"]
 
-    [invoke same-members "features:enabled_features()" "[maps,cond_expr,ifn_expr]"]
+    [invoke same-members "erl_features:enabled_features()" "[maps,cond_expr,ifn_expr]"]
 
     [invoke quit-erl]
 
     [invoke start-erl "-enable-feature ifn_expr -enable-feature maybe_expr"]
 
-    [invoke same-members "features:enabled_features()" "[maps,cond_expr,maybe_expr,ifn_expr]"]
+    [invoke same-members "erl_features:enabled_features()" "[maps,cond_expr,maybe_expr,ifn_expr]"]
 
     [invoke quit-erl]
 
 
     [invoke start-erl "-enable-feature ifn_expr maybe_expr"]
 
-    [invoke same-members "features:enabled_features()" "[cond_expr,maps,maybe_expr,ifn_expr]"]
+    [invoke same-members "erl_features:enabled_features()" "[cond_expr,maps,maybe_expr,ifn_expr]"]
 
     [invoke quit-erl]
 
     [invoke start-erl "-enable-feature ifn_expr maybe_expr -enable-feature ifnot_expr"]
 
-    [invoke same-members "features:enabled_features()" "[cond_expr,maps,maybe_expr,ifn_expr,ifnot_expr]"]
+    [invoke same-members "erl_features:enabled_features()" "[cond_expr,maps,maybe_expr,ifn_expr,ifnot_expr]"]
 
     [invoke quit-erl]
 
     # Enabling the same feature twice does not hurt
     [invoke start-erl "-enable-feature ifn_expr maybe_expr -enable-feature ifnot_expr ifn_expr"]
 
-    [invoke same-members "features:enabled_features()" "[cond_expr,maps,maybe_expr,ifn_expr,ifnot_expr]"]
+    [invoke same-members "erl_features:enabled_features()" "[cond_expr,maps,maybe_expr,ifn_expr,ifnot_expr]"]
 
     [invoke quit-erl]
 
@@ -49,18 +50,18 @@
     # problem since we have a lazy init of the feature set.
     [invoke start-erl "-enable-feature no_ftr"]
 
-    [invoke same-members "features:enabled_features()" "[cond_expr,maps]"]
+    [invoke same-members "erl_features:enabled_features()" "[cond_expr,maps]"]
 
     [invoke quit-erl]
 
     [invoke start-erl "-disable-feature cond_expr"]
 
-    [invoke same-members "features:enabled_features()" "[maps]"]
+    [invoke same-members "erl_features:enabled_features()" "[maps]"]
     # FIXME Need to check that keywords have changed as well!
     [invoke quit-erl]
 
     [invoke start-erl "-disable-feature all"]
-    !features:enabled_features().
+    !erl_features:enabled_features().
     ??[]
     ?$ERLPROMPT
 

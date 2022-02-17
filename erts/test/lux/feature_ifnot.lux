@@ -25,10 +25,11 @@
 [invoke setup]
 
 [newshell erl]
+    -undefined function
     !erl -pa $outdir
     ?$ERLPROMPT
 
-    !features:enable_feature(ifnot_expr).
+    !erl_features:enable_feature(ifnot_expr).
     ?[ifnot_expr]
     ?$ERLPROMPT
 
