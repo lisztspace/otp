@@ -647,7 +647,7 @@ predef_macros(File, EnabledFeatures) ->
     Machine = list_to_atom(erlang:system_info(machine)),
     Anno = line1(),
     OtpVersion = list_to_integer(erlang:system_info(otp_release)),
-    AvailableFeatures = features:features(),
+    AvailableFeatures = erl_features:features(),
     Defs = [{'FILE', 	           {none,[{string,Anno,File}]}},
 	    {'FUNCTION_NAME',      undefined},
 	    {'FUNCTION_ARITY',     undefined},
@@ -1031,7 +1031,7 @@ update_features(St0, Ind, Ftr, Loc) ->
             undefined -> fun erl_scan:f_reserved_word/1;
             Fun -> Fun
         end,
-    case features:keyword_fun(Ind, Ftr, Ftrs0, KeywordFun) of
+    case erl_features:keyword_fun(Ind, Ftr, Ftrs0, KeywordFun) of
         {error, Reason} ->
             {error, {Reason, Loc}};
         {ok, ResWordFun1, Ftrs1} ->
