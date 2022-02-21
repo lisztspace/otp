@@ -1,10 +1,12 @@
-[doc Test genreal working of runtime state of features]
+[doc Test general working of runtime state of features]
 
 [include features.luxinc]
 
 [invoke setup]
 
 [newshell erl]
+    !export OTP_TEST_FEATURES=true
+    ?SH-PROMPT:
     -undefined function
     !erl
     ?$ERLPROMPT

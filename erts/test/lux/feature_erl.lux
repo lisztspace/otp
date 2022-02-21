@@ -5,6 +5,8 @@
 [invoke setup]
 
 [newshell erl]
+    !export OTP_TEST_FEATURES=true
+    ?SH-PROMPT:
     -undefined function
     [invoke start-erl ""]
 

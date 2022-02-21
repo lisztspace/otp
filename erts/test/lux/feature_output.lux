@@ -5,6 +5,8 @@
 [invoke setup]
 
 [newshell compile]
+    !export OTP_TEST_FEATURES=true
+    ?SH-PROMPT:
     !export ERLC_USE_SERVER=false
     ?SH-PROMPT:
     # This file has instances of -compile({enable_feature, ..}) inside
@@ -14,6 +16,8 @@
 
 
 [newshell erl]
+    !export OTP_TEST_FEATURES=true
+    ?SH-PROMPT:
     -undefined function
     !erl -pa $outdir
     ?$ERLPROMPT

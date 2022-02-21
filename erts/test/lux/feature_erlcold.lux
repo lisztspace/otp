@@ -11,6 +11,8 @@
 [invoke setup]
 
 [newshell cmds]
+    !export OTP_TEST_FEATURES=true
+    ?SH-PROMPT:
     !export ERLC_USE_SERVER=false
     ?SH-PROMPT:
     [invoke compile feature_ignorant.erl ""]
@@ -135,6 +137,8 @@
     [invoke ok]
 
 [newshell erl]
+    !export OTP_TEST_FEATURES=true
+    ?SH-PROMPT:
     !erl
     ?$ERLPROMPT
     [invoke erl-compile feature_ignorant.erl []]

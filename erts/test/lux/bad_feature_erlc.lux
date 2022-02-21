@@ -29,6 +29,8 @@
 [invoke setup]
 
 [newshell cmds]
+    !export OTP_TEST_FEATURES=true
+    ?SH-PROMPT:
     -Unknown option
     # DO not user erlc server as it seems that under "sometimes" new
     # servers are added and left lingering
@@ -138,6 +140,8 @@
     ?%.*[0-9]+\| -feature
 
 [newshell erl]
+    !export OTP_TEST_FEATURES=true
+    ?SH-PROMPT:
     -undefined function
     !erl -pa $outdir
     ?$ERLPROMPT

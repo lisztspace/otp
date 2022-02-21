@@ -25,6 +25,8 @@
 [invoke setup]
 
 [newshell erl]
+    !export OTP_TEST_FEATURES=true
+    ?SH-PROMPT:
     -undefined function
     !erl -pa $outdir
     ?$ERLPROMPT
@@ -56,6 +58,8 @@
     ?$ERLPROMPT
 
 [newshell cmds]
+    !export OTP_TEST_FEATURES=true
+    ?SH-PROMPT:
     [invoke compile f_ifnot.erl ""]
     ?SH-PROMPT:
     [invoke ok]
