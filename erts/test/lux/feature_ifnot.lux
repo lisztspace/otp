@@ -176,7 +176,7 @@
 [newshell compile]
     !export OTP_TEST_FEATURES=true
     ?SH-PROMPT:
-    !export ERLC_USE_SERVER=false
+    !export ERLC_USE_SERVER=$erlcserver
     ?SH-PROMPT:
     # This file has instances of -compile({enable_feature, ..}) inside
     [invoke compile feature_directive_maybe_ifn.erl "-enable-feature ifn_expr"]

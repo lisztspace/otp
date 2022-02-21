@@ -13,7 +13,7 @@
 [newshell cmds]
     !export OTP_TEST_FEATURES=true
     ?SH-PROMPT:
-    !export ERLC_USE_SERVER=false
+    !export ERLC_USE_SERVER=$erlcserver
     ?SH-PROMPT:
     [invoke compile feature_ignorant.erl ""]
     ?SH-PROMPT:
@@ -154,4 +154,5 @@
     ?$ERLPROMPT
 
 [cleanup]
+    [invoke no-dump]
     !rm -fr $outdir

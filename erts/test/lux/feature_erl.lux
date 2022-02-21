@@ -70,4 +70,5 @@
     [invoke quit-erl]
 
 [cleanup]
+    [invoke no-dump]
     # done

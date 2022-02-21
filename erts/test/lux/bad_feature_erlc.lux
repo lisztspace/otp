@@ -34,7 +34,7 @@
     -Unknown option
     # DO not user erlc server as it seems that under "sometimes" new
     # servers are added and left lingering
-    !export ERLC_USE_SERVER=false
+    !export ERLC_USE_SERVER=$erlcserver
     ?SH-PROMPT:
     [invoke compile ignorant.erl ""]
     ?SH-PROMPT:
@@ -234,4 +234,5 @@
     [invoke notok]
 
 [cleanup]
+    [invoke no-dump]
     !rm -fr $outdir

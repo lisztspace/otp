@@ -27,4 +27,5 @@
     ?$ERLPROMPT
 
 [cleanup]
+    [invoke no-dump]
     !rm -fr $outdir

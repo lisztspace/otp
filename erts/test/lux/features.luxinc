@@ -23,6 +23,8 @@
 # Directory holding input files for feature tests
 [global input=input]
 
+[global erlcserver=true]
+
 [macro ok]
     !echo ==$$?==
     ?==0==
@@ -50,6 +52,9 @@
     ?(/tmp.*)
     [global outdir=$1]
     ?SH-PROMPT:
+    # Make sure there is no erl_crash.dump present
+    !rm -f erl_crash.dump
+    ?SH-PROMPT:
 [endmacro]
 
 [macro start-erl args]
@@ -69,4 +74,12 @@
     !maps:from_keys($l1,foo) == maps:from_keys($l2,foo).
     ?true
     ?$ERLPROMPT
+[endmacro]
+
+[macro no-dump]
+    !ls erl_crash.dump
+    ?SH-PROMPT:
+    !echo ==$?==
+    ?==2==
+    ?SH-PROMPT:
 [endmacro]

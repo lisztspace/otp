@@ -58,3 +58,4 @@
     ?$ERLPROMPT
 
 [cleanup]
+    [invoke no-dump]
