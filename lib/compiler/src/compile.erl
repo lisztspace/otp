@@ -2105,6 +2105,7 @@ pre_load() ->
 	 epp,
 	 erl_bifs,
 	 erl_expand_records,
+         erl_features,
 	 erl_lint,
 	 erl_parse,
 	 erl_scan,

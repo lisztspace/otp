@@ -38,7 +38,7 @@
 
 -export([features_used/1]).
 
-%% -on_load(init_features/0).
+-on_load(init_features/0).
 
 -type type() :: 'extension' | 'backwards_incompatible_change'.
 -type status() :: 'experimental'
@@ -58,10 +58,15 @@
              true -> ok
          end)).
 
-%% Currently know features
+%% Specification about currently known features.
+feature_specs() ->
+    #{}.
+
+%% Currently known features
 -spec features() -> [atom()].
 features() ->
-    [ifn_expr, maybe_expr, ifnot_expr, unless_expr, maps, cond_expr].
+    Map = persistent_term:get({?MODULE, feature_specs}),
+    maps:keys(Map).
 
 is_valid_feature(Ftr) ->
     lists:member(Ftr, features()).
@@ -145,71 +150,11 @@ adjust(Col, [{W, L}| WLs], Ws) ->
           permanent => release(),
           rejected => release()
          }.
-feature_info(ifn_expr) ->
-    #{short => "New expression `ifn cond -> body end`",
-      description =>
-          "Inclusion of expression `ifn cond -> body end`, which "
-      "evaluates `body` when cond is false.  This is a truly "
-      "experimental feature, present only to show and use the "
-      "support for experimental features.  Not extensively tested.  "
-      "Implementated by a transformation in the parser.",
-      status => experimental,
-      experimental => 24,
-      keywords => ['ifn'],
-      type => extension};
-feature_info(ifnot_expr) ->
-    #{short => "New expression `ifnot cond -> body end`",
-      description =>
-          "Inclusion of expression `ifnot cond -> body end`, which "
-      "evaluates `body` when cond is false.  This is a truly "
-      "experimental feature, present only to show and use the "
-      "support for experimental features.  Not extensively tested.  "
-      "Similar to ifn_expr, but with a deeper implementation.",
-      status => experimental,
-      experimental => 25,
-      keywords => ['ifnot'],
-      type => extension};
-feature_info(maybe_expr) ->
-    #{short => "Value based error handling (EEP49)",
-      description =>
-          "Implementation of the maybe expression proposed in EEP49 -- "
-      "Value based error handling.",
-      status => experimental,
-      experimental => 25,
-      keywords => ['maybe', 'else'],
-      type => extension};
-feature_info(unless_expr) ->
-    #{short => "`unless <cond> -> <body> end",
-      description =>
-          "Introduction of new expression `unless <cond> -> <body> end."
-      " Truly experimental.",
-      status => experimental,
-      experimental => 25,
-      keywords => ['unless'],
-      type => extension};
-feature_info(maps) ->
-    #{short => "Add maps as new data type",
-      description => "Add new low data type maps with syntactic "
-      "support in Erlang as well native support in the beam. "
-      "Insert, lookup and delete are asymptotically constant.",
-      status => permanent,
-      experimental => 17,
-      approved => 18,
-      permanent => 19,
-      keywords => [],
-      type => extension};
-feature_info(cond_expr) ->
-    #{short => "Introduce general Lisp style conditional",
-      description =>
-          "Finally complement the painfully broken `if` "
-      "with a general conditional as in Lisp from the days of old.",
-      status => approved,
-      experimental => 24,
-      approved => 25,
-      keywords => [],
-      type => extension};
-feature_info(Ftr) ->
-    ?VALID_FEATURE(Ftr).
+feature_info(Feature) ->
+    ?VALID_FEATURE(Feature),
+
+    Map = persistent_term:get({?MODULE, feature_specs}),
+    maps:get(Feature, Map).
 
 %% New keywords for a feature.  The current set is just for
 %% tests and development.
@@ -219,6 +164,10 @@ keywords(Ftr) ->
 
     #{keywords := Keywords} = feature_info(Ftr),
     Keywords.
+
+%% Internal - Ftr is valid
+keywords(Ftr, Map) ->
+    maps:get(keywords, maps:get(Ftr, Map)).
 
 %% Utilities
 %% Returns list of enabled features and a new keywords function
@@ -336,6 +285,8 @@ format_error({invalid_features, Features}) ->
 %% This is almost static, so we go for an almost permanent state,
 %% i.e., use persistent_term.
 init_features() ->
+    Map = init_specs(),
+
     persistent_term:put({?MODULE, enabled_features}, []),
     persistent_term:put({?MODULE, keywords}, []),
 
@@ -373,24 +324,33 @@ init_features() ->
                 end
         end,
     FOps = lists:filtermap(F, FeatureOps),
-    {FeaturesX, _} =
-        collect_features(FOps),
+    {Features, _} = collect_features(FOps),
     {Enabled, Keywords} =
-        lists:foldl(fun(Ftr, {Features, Keys}) ->
-                            case lists:member(Ftr, Features) of
+        lists:foldl(fun(Ftr, {Ftrs, Keys}) ->
+                            case lists:member(Ftr, Ftrs) of
                                 true ->
-                                    {Features, Keys};
+                                    {Ftrs, Keys};
                                 false ->
-                                    {[Ftr| Features],
-                                     keywords(Ftr) ++ Keys}
+                                    {[Ftr| Ftrs],
+                                     keywords(Ftr, Map) ++ Keys}
                             end
                     end,
                     {[], []},
-                    FeaturesX),
+                    Features),
+
+    %% Save state
     enabled_features(Enabled),
     set_keywords(Keywords),
     persistent_term:put({?MODULE, init_done}, true),
     ok.
+
+init_specs() ->
+    Specs = case os:getenv("OTP_TEST_FEATURES") of
+                "true" -> test_features();
+                _ -> feature_specs()
+            end,
+    persistent_term:put({?MODULE, feature_specs}, Specs),
+    Specs.
 
 ensure_init() ->
     case persistent_term:get({?MODULE, init_done}, false) of
@@ -528,3 +488,70 @@ add_ftr(F, [F| _] = Fs) ->
     Fs;
 add_ftr(F, [F0| Fs]) ->
     [F0| add_ftr(F, Fs)].
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Test features - not present in a release
+test_features() ->
+    #{ifn_expr =>
+          #{short => "New expression `ifn cond -> body end`",
+            description =>
+                "Inclusion of expression `ifn cond -> body end`, which "
+            "evaluates `body` when cond is false.  This is a truly "
+            "experimental feature, present only to show and use the "
+            "support for experimental features.  Not extensively tested.  "
+            "Implementated by a transformation in the parser.",
+            status => experimental,
+            experimental => 24,
+            keywords => ['ifn'],
+            type => extension},
+      ifnot_expr =>
+          #{short => "New expression `ifnot cond -> body end`",
+            description =>
+                "Inclusion of expression `ifnot cond -> body end`, which "
+            "evaluates `body` when cond is false.  This is a truly "
+            "experimental feature, present only to show and use the "
+            "support for experimental features.  Not extensively tested.  "
+            "Similar to ifn_expr, but with a deeper implementation.",
+            status => experimental,
+            experimental => 25,
+            keywords => ['ifnot'],
+            type => extension},
+      unless_expr =>
+          #{short => "`unless <cond> -> <bodby> end",
+            description =>
+                "Introduction of new expression `unless <cond> -> <body> end."
+            " Truly experimental.",
+            status => experimental,
+            experimental => 25,
+            keywords => ['unless'],
+            type => extension},
+      maps =>
+          #{short => "Add maps as new data type",
+            description => "Add new low data type maps with syntactic "
+            "support in Erlang as well native support in the beam. "
+            "Insert, lookup and delete are asymptotically constant.",
+            status => permanent,
+            experimental => 17,
+            approved => 18,
+            permanent => 19,
+            keywords => [],
+            type => extension},
+      cond_expr =>
+          #{short => "Introduce general Lisp style conditional",
+            description =>
+                "Finally complement the painfully broken `if` "
+            "with a general conditional as in Lisp from the days of old.",
+            status => approved,
+            experimental => 24,
+            approved => 25,
+            keywords => [],
+            type => extension},
+      while_expr =>
+          #{short => "Introduce strange iterative expressions",
+            description =>
+                "Introduce looping constructs, with seemingly "
+            "destructive assignment and vague semantics.",
+            status => experimental,
+            experimental => 25,
+            keywords => ['while', 'until'],
+            type => extension}}.
