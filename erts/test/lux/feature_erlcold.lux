@@ -19,14 +19,16 @@
     ?SH-PROMPT:
     [invoke ok]
 
+    # Different error message when ifn is not in parser
     [invoke compile feature_ignorant.erl "+'{enable_feature, ifn_expr}'"]
-    ?syntax error before: ','
+    ?syntax error before:
     ?syntax error before: ifn
     ?SH-PROMPT:
     [invoke notok]
 
+    # Different error message when ifn is not in parser
     [invoke compile feature_ignorant.erl "-enable-feature ifn_expr"]
-    ?syntax error before: ','
+    ?syntax error before:
     ?syntax error before: ifn
     ?SH-PROMPT:
     [invoke notok]
@@ -45,16 +47,18 @@
     ?SH-PROMPT:
     [invoke notok]
 
+    # Different error message when ifn not in parser
     [invoke compile feature_ignorant.erl "+'{enable_feature, ifn_expr}' +'{enable_feature, maybe_expr}'"]
-    ?syntax error before: ','
+    ?syntax error before:
     ?syntax error before: maybe
     ?syntax error before: else
     ?syntax error before: ifn
     ?SH-PROMPT:
     [invoke notok]
 
+    # Different error message when ifn not in parser
     [invoke compile feature_ignorant.erl "-enable-feature ifn_expr -enable-feature maybe_expr"]
-    ?syntax error before: ','
+    ?syntax error before:
     ?syntax error before: maybe
     ?syntax error before: else
     ?syntax error before: ifn
@@ -105,13 +109,15 @@
     ?SH-PROMPT:
     [invoke ok]
 
+    # Different error message when ifn not in parser
     [invoke compile feature_maybe.erl "'+{enable_feature, ifn_expr}'"]
-    [invoke syntax-error ',']
+    [invoke syntax-error ifn]
     ?SH-PROMPT:
     [invoke notok]
 
+    # Different error message when ifn not in parser
     [invoke compile feature_maybe.erl "'+{enable_feature, maybe_expr}' '+{enable_feature, ifn_expr}'"]
-    [invoke syntax-error ',']
+    [invoke syntax-error ifn]
     ?SH-PROMPT:
     [invoke notok]
 
@@ -131,11 +137,6 @@
     ?SH-PROMPT:
     [invoke ok]
 
-    # This file has instances of -compile({enable_feature, ..}) inside
-    [invoke compile feature_directive_maybe_ifn.erl "-enable-feature ifn_expr"]
-    ?SH-PROMPT:
-    [invoke ok]
-
 [newshell erl]
     !export OTP_TEST_FEATURES=true
     ?SH-PROMPT:
@@ -145,8 +146,9 @@
     ???{ok,feature_ignorant}
     ?$ERLPROMPT
 
+    # Different error message when ifn not in parser
     [invoke erl-compile feature_ignorant.erl [{enable_feature,ifn_expr}]]
-    ?syntax error before: ','
+    ?syntax error before: ifn
     ?syntax error before: ifn
     ?error
     ?$ERLPROMPT

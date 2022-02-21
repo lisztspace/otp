@@ -104,5 +104,93 @@
     ?SH-PROMPT
     [invoke notok]
 
+    # Moved from feature_erlc.lux.  This assumes that ifn is available
+    # in parser, which is no longer true.
+[shell cmds]
+    [invoke compile f_use_ifn.erl ""]
+    ?syntax error before: X
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile f_use_ifn.erl "-enable-feature ifn_expr"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+    [shell erl]
+    !f_use_ifn:use_ifn(0).
+    ???!(0 > 0)
+    ?$ERLPROMPT
+
+    # Moved from feature_erlcold.lux as ifn is no longer present in parser
+    [invoke compile feature_ignorant.erl "+'{enable_feature, ifn_expr}'"]
+    ?syntax error before: ','
+    ?syntax error before: ifn
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_ignorant.erl "-enable-feature ifn_expr"]
+    ?syntax error before: ','
+    ?syntax error before: ifn
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_ignorant.erl "+'{enable_feature, ifn_expr}' +'{enable_feature, maybe_expr}'"]
+    ?syntax error before: ','
+    ?syntax error before: maybe
+    ?syntax error before: else
+    ?syntax error before: ifn
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_ignorant.erl "-enable-feature ifn_expr -enable-feature maybe_expr"]
+    ?syntax error before: ','
+    ?syntax error before: maybe
+    ?syntax error before: else
+    ?syntax error before: ifn
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_maybe.erl "'+{enable_feature, ifn_expr}'"]
+    [invoke syntax-error ',']
+    ?SH-PROMPT:
+    [invoke notok]
+
+    [invoke compile feature_maybe.erl "'+{enable_feature, maybe_expr}' '+{enable_feature, ifn_expr}'"]
+    [invoke syntax-error ',']
+    ?SH-PROMPT:
+    [invoke notok]
+
+    # This file has instances of -compile({enable_feature, ..}) inside
+    [invoke compile feature_directive_maybe_ifn.erl "-enable-feature ifn_expr"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+[shell erl]
+    [invoke erl-compile feature_ignorant.erl [{enable_feature,ifn_expr}]]
+    ?syntax error before: ','
+    ?syntax error before: ifn
+    ?error
+    ?$ERLPROMPT
+
+    # Moved from feature_output.lux
+[newshell compile]
+    !export OTP_TEST_FEATURES=true
+    ?SH-PROMPT:
+    !export ERLC_USE_SERVER=false
+    ?SH-PROMPT:
+    # This file has instances of -compile({enable_feature, ..}) inside
+    [invoke compile feature_directive_maybe_ifn.erl "-enable-feature ifn_expr"]
+    ?SH-PROMPT:
+    [invoke ok]
+
+[shell erl]
+    !l(feature_directive_maybe_ifn).
+    ??{module,feature_directive_maybe_ifn}
+    ?$ERLPROMPT
+
+    !feature_directive_maybe_ifn:foo().
+    ??['ifn','maybe','else','if']
+    ?$ERLPROMPT
+
 [cleanup]
     !rm -fr $outdir

@@ -353,20 +353,6 @@
     ?true
     ?$ERLPROMPT
 
-[shell cmds]
-    [invoke compile f_use_ifn.erl ""]
-    ?syntax error before: X
-    ?SH-PROMPT:
-    [invoke notok]
-
-    [invoke compile f_use_ifn.erl "-enable-feature ifn_expr"]
-    ?SH-PROMPT:
-    [invoke ok]
-
-    [shell erl]
-    !f_use_ifn:use_ifn(0).
-    ???!(0 > 0)
-    ?$ERLPROMPT
 
 [shell cmds]
     [invoke compile f_disable.erl "-enable-feature ifn_expr -enable-feature maybe_expr"]
