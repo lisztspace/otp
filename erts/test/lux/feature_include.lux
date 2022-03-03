@@ -54,11 +54,11 @@
     ??{module,f_include_maybe}
     ?$ERLPROMPT
     !f_include_maybe:foo().
-    ??{conditional,on,else}
+    ??{conditional,on,until}
     ?$ERLPROMPT
 
 [shell cmds]
-    [invoke compile f_include_maybe.erl "-enable-feature maybe_expr"]
+    [invoke compile f_include_maybe.erl "-enable-feature while_expr"]
     ??input/maybe.hrl
     ??syntax error before
     [invoke notok]
@@ -68,13 +68,13 @@
     ??syntax error before
     [invoke notok]
 
-    [invoke compile f_include_maybe.erl "-enable-feature maybe_expr -Denable_maybe=2"]
+    [invoke compile f_include_maybe.erl "-enable-feature while_expr -Denable_maybe=2"]
     [invoke ok]
 
 [shell erl]
     [invoke quit-erl]
 
-    [invoke start-erl "-enable-feature maybe_expr"]
+    [invoke start-erl "-enable-feature while_expr"]
     !l(f_include_maybe).
     ??{module,f_include_maybe}
     ?$ERLPROMPT
