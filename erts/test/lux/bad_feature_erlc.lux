@@ -150,13 +150,13 @@
     ?error
     ?$ERLPROMPT
 
-    [invoke erl-compile ignorant.erl [{enable_feature,ifn},{enable_feature,maybe}]]
-    ??the features 'ifn' and 'maybe' do not exist
+    [invoke erl-compile ignorant.erl [{enable_feature,ifn},{enable_feature,while}]]
+    ??the features 'ifn' and 'while' do not exist
     ?error
     ?$ERLPROMPT
 
-    [invoke erl-compile ignorant.erl [{enable_feature,unless},{enable_feature,ifn},{enable_feature,maybe}]]
-    ??the features 'unless', 'ifn' and 'maybe' do not exist
+    [invoke erl-compile ignorant.erl [{enable_feature,unless},{enable_feature,ifn},{enable_feature,while}]]
+    ??the features 'unless', 'ifn' and 'while' do not exist
     ?error
     ?$ERLPROMPT
 
@@ -173,7 +173,7 @@
 [shell cmds]
     # Enable a feature on the command line and disable it in a directive
     # FIXME This should perhaps be elsewhere
-    [invoke compile f_directives_3.erl "-enable-feature maybe_expr"]
+    [invoke compile f_directives_3.erl "-enable-feature while_expr"]
     [invoke ok]
 
     [invoke compile f_macros.erl ""]
