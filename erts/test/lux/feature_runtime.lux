@@ -57,5 +57,34 @@
     ??argument 1: unknown feature
     ?$ERLPROMPT
 
+[shell erl]
+    [invoke quit-erl]
+
+    [invoke start-erl ""]
+    !while.
+    ?while
+    ?$ERLPROMPT
+
+    # If there is no Meta chunk, we should just get [] as answer,
+    # not a failure.  We use a file compiled with an older release to be
+    # sure no meta chunk is present
+    !erl_features:features_used(older).
+    ???[]
+    ?$ERLPROMPT
+
+    !erl_features:features_used("older.beam").
+    ???[]
+    ?$ERLPROMPT
+
+
+    # Test getting used features for unknown modules and files
+    !erl_features:features_used(no_module).
+    ??not_found
+    ?$ERLPROMPT
+
+    !erl_features:features_used("none.beam").
+    ??not_found
+    ?$ERLPROMPT
+
 [cleanup]
     [invoke no-dump]
