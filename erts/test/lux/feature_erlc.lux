@@ -46,17 +46,17 @@
     ?SH-PROMPT:
     [invoke notok]
 
-    [invoke compile ignorant.erl "+'{enable_feature, maybe_expr}'"]
-    ?syntax error before: maybe
-    ?syntax error before: maybe
-    ?syntax error before: else
+    [invoke compile ignorant.erl "+'{enable_feature, while_expr}'"]
+    ?syntax error before: while
+    ?syntax error before: while
+    ?syntax error before: until
     ?SH-PROMPT:
     [invoke notok]
 
-    [invoke compile ignorant.erl "+'{enable_feature, ifn_expr}' +'{enable_feature, maybe_expr}'"]
+    [invoke compile ignorant.erl "+'{enable_feature, ifn_expr}' +'{enable_feature, while_expr}'"]
     ?syntax error before:
-    ?syntax error before: maybe
-    ?syntax error before: else
+    ?syntax error before: while
+    ?syntax error before: until
     ?syntax error before: ifn
     ?SH-PROMPT:
     [invoke notok]
@@ -69,27 +69,27 @@
     ?SH-PROMPT:
     [invoke ok]
 
-    [invoke compile f_ifn.erl "'+{enable_feature, maybe_expr}'"]
-    [invoke syntax-error maybe]
-    [invoke syntax-error else]
+    [invoke compile f_ifn.erl "'+{enable_feature, while_expr}'"]
+    [invoke syntax-error while]
+    [invoke syntax-error until]
     ?SH-PROMPT:
     [invoke notok]
 
-    [invoke compile f_ifn.erl "-enable-feature maybe_expr"]
-    [invoke syntax-error maybe]
-    [invoke syntax-error else]
+    [invoke compile f_ifn.erl "-enable-feature while_expr"]
+    [invoke syntax-error while]
+    [invoke syntax-error until]
     ?SH-PROMPT:
     [invoke notok]
 
-    [invoke compile f_ifn.erl "'+{enable_feature, maybe_expr}' '+{enable_feature, ifn_expr}'"]
-    [invoke syntax-error maybe]
-    [invoke syntax-error else]
+    [invoke compile f_ifn.erl "'+{enable_feature, while_expr}' '+{enable_feature, ifn_expr}'"]
+    [invoke syntax-error while]
+    [invoke syntax-error until]
     ?SH-PROMPT:
     [invoke notok]
 
-    [invoke compile f_ifn.erl "-enable-feature maybe_expr -enable-feature ifn_expr"]
-    [invoke syntax-error maybe]
-    [invoke syntax-error else]
+    [invoke compile f_ifn.erl "-enable-feature while_expr -enable-feature ifn_expr"]
+    [invoke syntax-error while]
+    [invoke syntax-error until]
     ?SH-PROMPT:
     [invoke notok]
 
@@ -97,11 +97,11 @@
     ?SH-PROMPT:
     [invoke ok]
 
-    [invoke compile f_maybe.erl "'+{enable_feature, maybe_expr}'"]
+    [invoke compile f_maybe.erl "'+{enable_feature, while_expr}'"]
     ?SH-PROMPT:
     [invoke ok]
 
-    [invoke compile f_maybe.erl "-enable-feature maybe_expr"]
+    [invoke compile f_maybe.erl "-enable-feature while_expr"]
     ?SH-PROMPT:
     [invoke ok]
 
@@ -115,12 +115,12 @@
     ?SH-PROMPT:
     [invoke notok]
 
-    [invoke compile f_maybe.erl "'+{enable_feature, maybe_expr}' '+{enable_feature, ifn_expr}'"]
+    [invoke compile f_maybe.erl "'+{enable_feature, while_expr}' '+{enable_feature, ifn_expr}'"]
     ?syntax error before:
     ?SH-PROMPT:
     [invoke notok]
 
-    [invoke compile f_maybe.erl "-enable-feature maybe_expr -enable-feature ifn_expr"]
+    [invoke compile f_maybe.erl "-enable-feature while_expr -enable-feature ifn_expr"]
     ?syntax error before:
     ?SH-PROMPT:
     [invoke notok]
@@ -129,11 +129,11 @@
     ?SH-PROMPT:
     [invoke ok]
 
-    [invoke compile f_maybe_ifn.erl "'+{enable_feature, maybe_expr}'"]
+    [invoke compile f_maybe_ifn.erl "'+{enable_feature, while_expr}'"]
     ?SH-PROMPT:
     [invoke ok]
 
-    [invoke compile f_maybe_ifn.erl "-enable-feature maybe_expr"]
+    [invoke compile f_maybe_ifn.erl "-enable-feature while_expr"]
     ?SH-PROMPT:
     [invoke ok]
 
@@ -145,11 +145,11 @@
     ?SH-PROMPT:
     [invoke ok]
 
-    [invoke compile f_maybe_ifn.erl "'+{enable_feature, maybe_expr}' '+{enable_feature, ifn_expr}'"]
+    [invoke compile f_maybe_ifn.erl "'+{enable_feature, while_expr}' '+{enable_feature, ifn_expr}'"]
     ?SH-PROMPT:
     [invoke ok]
 
-    [invoke compile f_maybe_ifn.erl "-enable-feature maybe_expr -enable-feature ifn_expr"]
+    [invoke compile f_maybe_ifn.erl "-enable-feature while_expr -enable-feature ifn_expr"]
     ?SH-PROMPT:
     [invoke ok]
 
@@ -178,10 +178,10 @@
     ?error
     ?$ERLPROMPT
 
-    [invoke erl-compile ignorant.erl [{enable_feature,ifn_expr},{enable_feature,maybe_expr}]]
+    [invoke erl-compile ignorant.erl [{enable_feature,ifn_expr},{enable_feature,while_expr}]]
     ?syntax error before:
-    ?syntax error before: maybe
-    ?syntax error before: else
+    ?syntax error before: while
+    ?syntax error before: until
     ?syntax error before: ifn
     ?error
     ?$ERLPROMPT
@@ -197,7 +197,7 @@
     ?$ERLPROMPT
 
     !Fs = erl_features:features_used(f_maybe_ifn).
-    [invoke same-members Fs "[cond_expr,maps,maybe_expr,ifn_expr]"]
+    [invoke same-members Fs "[cond_expr,maps,while_expr,ifn_expr]"]
     !f(Fs).
     ?$ERLPROMPT
 
@@ -304,7 +304,7 @@
     [invoke start-erl ""]
 
 [shell cmds]
-    [invoke compile f_macros.erl "-enable-feature maybe_expr"]
+    [invoke compile f_macros.erl "-enable-feature while_expr"]
     ?SH-PROMPT:
     [invoke ok]
 
@@ -317,9 +317,9 @@
     ?$ERLPROMPT
 
     # FIXME This should not be allowed at runtime..
-    !Fs = erl_features:enable_feature(maybe_expr).
+    !Fs = erl_features:enable_feature(while_expr).
     ?$ERLPROMPT
-    [invoke same-members Fs "[cond_expr,maps,ifn_expr,maybe_expr]"]
+    [invoke same-members Fs "[cond_expr,maps,ifn_expr,while_expr]"]
     !f(Fs).
     ?$ERLPROMPT
 
@@ -336,7 +336,7 @@
     ?$ERLPROMPT
 
 [shell cmds]
-    [invoke compile f_macros.erl "-enable-feature ifn_expr -enable-feature maybe_expr"]
+    [invoke compile f_macros.erl "-enable-feature ifn_expr -enable-feature while_expr"]
     ?SH-PROMPT:
     [invoke ok]
 
@@ -355,40 +355,40 @@
 
 
 [shell cmds]
-    [invoke compile f_disable.erl "-enable-feature ifn_expr -enable-feature maybe_expr"]
+    [invoke compile f_disable.erl "-enable-feature ifn_expr -enable-feature while_expr"]
     ?SH-PROMPT:
     [invoke ok]
 
 [shell erl]
     !f_disable:no_ifn().
     # FIXME Should really be 'maybe' since it is enabled
-    ???['ifn','maybe',no_ifn]
+    ???['ifn','while',no_ifn]
     ?$ERLPROMPT
 
     !f_disable:no_ftrs().
-    ???['ifn','maybe','else',no_maybe]
+    ???['ifn','while','until',no_maybe]
     ?$ERLPROMPT
 
 [shell cmds]
     [invoke compile ignorant.erl "+warn_keywords"]
     # Note: not all messges are checked
-    ?atom 'maybe' is reserved in the experimental feature 'maybe_expr'
-    ?atom 'else' is reserved in the experimental feature 'maybe_expr'
+    ?atom 'while' is reserved in the experimental feature 'while_expr'
+    ?atom 'until' is reserved in the experimental feature 'while_expr'
     ?atom 'ifn' is reserved in the experimental feature 'ifn_expr'
     [invoke ok]
 
     [invoke compile ignorant.erl "+warn_keywords -Werror"]
     # Note: not all messges are checked
-    ?atom 'maybe' is reserved in the experimental feature 'maybe_expr'
-    ?atom 'else' is reserved in the experimental feature 'maybe_expr'
+    ?atom 'while' is reserved in the experimental feature 'while_expr'
+    ?atom 'until' is reserved in the experimental feature 'while_expr'
     ?atom 'ifn' is reserved in the experimental feature 'ifn_expr'
     [invoke notok]
 
     # This file has a directive for keyword warnings
     [invoke compile ignorant_directive.erl ""]
     # Note: not all messges are checked
-    ?Warning: atom 'maybe' is reserved in the experimental feature 'maybe_expr'
-    ?Warning: atom 'else' is reserved in the experimental feature 'maybe_expr'
+    ?Warning: atom 'while' is reserved in the experimental feature 'while_expr'
+    ?Warning: atom 'until' is reserved in the experimental feature 'while_expr'
     ?Warning: atom 'ifn' is reserved in the experimental feature 'ifn_expr'
     [invoke ok]
 
@@ -407,7 +407,7 @@
 [shell erl]
     !Fs = erl_features:features_used(foo).
     ?$ERLPROMPT
-    [invoke same-members Fs "[unless_expr,ifn_expr,maybe_expr,cond_expr,maps,ifnot_expr]"]
+    [invoke same-members Fs "[unless_expr,ifn_expr,while_expr,cond_expr,maps,ifnot_expr]"]
     !f(Fs).
     ?$ERLPROMPT
     # !maps:from_keys([unless_expr,ifn_expr,maybe_expr,cond_expr,maps,ifnot_expr],true) == maps:from_keys(Fs, true).
@@ -421,7 +421,7 @@
 [shell erl]
     !Fs = erl_features:features_used(foo).
     ?$ERLPROMPT
-    !maps:from_keys([ifn_expr,maybe_expr,cond_expr,maps,ifnot_expr], foo) == maps:from_keys(Fs, foo).
+    !maps:from_keys([ifn_expr,while_expr,cond_expr,maps,ifnot_expr], foo) == maps:from_keys(Fs, foo).
     ?true
     ?$ERLPROMPT
     !f(Fs).
