@@ -26,7 +26,7 @@
 -export([foo/0]).
 
 foo() ->
-    ['ifn', maybe, else].
+    ['ifn', while, until].
 
 bar() ->
-    [else, maybe].
+    [until, while].
