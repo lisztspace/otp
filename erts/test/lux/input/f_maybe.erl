@@ -26,7 +26,7 @@
 -export([foo/0]).
 
 foo() ->
-    [ifn, 'maybe', 'then'].
+    [ifn, 'xmaybe', 'then'].
 
 bar() ->
-    ['then', 'maybe'].
+    ['then', 'xmaybe'].
