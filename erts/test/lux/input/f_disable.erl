@@ -21,7 +21,7 @@
 -module(f_disable).
 
 -feature(disable, ifn_expr).
--feature(disable, maybe_expr).
+-feature(disable, while_expr).
 
 -export([no_ifn/0,
 	 no_ftrs/0]).
@@ -33,16 +33,16 @@
 -endif.
 
 no_ifn() ->
-    [ifn, 'maybe', ?FOO].
+    [ifn, 'while', ?FOO].
 
--if(?FEATURE_ENABLED(maybe_expr)).
+-if(?FEATURE_ENABLED(while_expr)).
 -define(BAR, has_maybe).
 -else.
 -define(BAR, no_maybe).
 -endif.
 
 no_ftrs() ->
-    [ifn, maybe, else, ?BAR].
+    [ifn, while, until, ?BAR].
 
 %% -compile({enable_feature, ifn_expr}).
 
