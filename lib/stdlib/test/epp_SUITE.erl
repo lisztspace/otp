@@ -2111,7 +2111,11 @@ run_test(Config, Test0, Opts0) ->
     Opts = [return, {i,PrivDir},{outdir,PrivDir}] ++ Opts0,
     {ok, epp_test, []} = compile:file(File, Opts),
     AbsFile = filename:rootname(File, ".erl"),
+    %% FIXME For now, use firbidden feature at rumtime
+    erl_features:enable_feature(maybe_expr),
     {module, epp_test} = code:load_abs(AbsFile, epp_test),
+    %% FIXME For now, use firbidden feature at rumtime
+    erl_features:disable_feature(maybe_expr),
     Reply = epp_test:t(),
     code:purge(epp_test),
     Reply.
