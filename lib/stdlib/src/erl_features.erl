@@ -38,8 +38,6 @@
 
 -export([features_used/1]).
 
--on_load(init_features/0).
-
 -type type() :: 'extension' | 'backwards_incompatible_change'.
 -type status() :: 'experimental'
                   | 'approved'
@@ -65,7 +63,10 @@ feature_specs() ->
 %% Currently known features
 -spec features() -> [atom()].
 features() ->
-    Map = persistent_term:get({?MODULE, feature_specs}),
+    Map = case persistent_term:get({?MODULE, feature_specs}, none) of
+              none -> init_specs();
+              M -> M
+          end,
     maps:keys(Map).
 
 is_valid_feature(Ftr) ->
