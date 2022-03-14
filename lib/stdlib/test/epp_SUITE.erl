@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1998-2021. All Rights Reserved.
+%% Copyright Ericsson AB 1998-2022. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -816,7 +816,8 @@ otp_8130(Config) when is_list(Config) ->
                                "t() -> ?a.\n"),
     {ok,Epp} = epp:open(File, []),
     PreDefMacs = macs(Epp),
-    ['BASE_MODULE','BASE_MODULE_STRING','BEAM','FILE',
+    ['BASE_MODULE','BASE_MODULE_STRING','BEAM',
+     'FEATURE_AVAILABLE', 'FEATURE_ENABLED','FILE',
      'FUNCTION_ARITY','FUNCTION_NAME',
      'LINE','MACHINE','MODULE','MODULE_STRING',
      'OTP_RELEASE'] = PreDefMacs,
