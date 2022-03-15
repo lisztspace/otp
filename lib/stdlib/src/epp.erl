@@ -135,12 +135,14 @@ open(Options) ->
         Name ->
             Self = self(),
             Epp = spawn(fun() -> server(Self, Name, Options) end),
+            Extra = proplists:get_bool(extra, Options),
             case epp_request(Epp) of
-                {ok, Pid, Encoding} ->
-                    case proplists:get_bool(extra, Options) of
-                        true -> {ok, Pid, [{encoding, Encoding}]};
-                        false -> {ok, Pid}
-                    end;
+                {ok, Pid, Encoding} when Extra ->
+                    {ok, Pid, [{encoding, Encoding}]};
+                {ok, Pid, _} ->
+                    {ok, Pid};
+                {ok, Pid} when Extra ->
+                    {ok, Pid, []};
                 Other ->
                     Other
             end
@@ -318,10 +320,8 @@ parse_file(Ifile, Options) ->
     case open([{name, Ifile} | Options]) of
 	{ok,Epp} ->
 	    Forms = parse_file(Epp),
-            Epp ! {get_features, self()},
-            Ftrs = receive X -> X end,
 	    close(Epp),
-	    {ok, Forms, [{features, Ftrs}]};
+	    {ok, Forms};
 	{ok,Epp,Extra} ->
 	    Forms = parse_file(Epp),
             Epp ! {get_features, self()},
