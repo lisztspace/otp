@@ -8,7 +8,7 @@
     !export ERLC_USE_SERVER=false
     ?SH-PROMPT:
     # This file has instances of -compile({enable_feature, ..}) inside
-    [invoke compile feature_directive_maybe_ifn.erl "--enable-feature=ifn_expr"]
+    [invoke compile feature_directive_maybe_ifn.erl "-enable-feature=ifn_expr"]
     ?SH-PROMPT:
     [invoke ok]
 
