@@ -19,14 +19,14 @@
 %%
 
 %% This module knows about the feature ifn, but not about maybe thus
-%% use maybe and then as ordinary atoms.
+%% use maybe and else as ordinary atoms.
 
 -module(f_ifn).
 
 -export([foo/0]).
 
 foo() ->
-    ['ifn', maybe, then].
+    ['ifn', maybe, else].
 
 bar() ->
-    [then, maybe].
+    [else, maybe].

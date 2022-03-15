@@ -29,12 +29,12 @@
          baz/1]).
 
 foo() ->
-    [ifn, maybe, then].
+    [ifn, maybe, else].
 
 frob(maybe) -> false.
 
 bar() ->
-    [then, maybe].
+    [else, maybe].
 
 baz(ifn) ->
     true.

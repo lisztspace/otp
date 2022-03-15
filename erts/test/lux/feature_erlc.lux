@@ -47,14 +47,14 @@
     [invoke compile ignorant.erl "+'{enable_feature, maybe_expr}'"]
     ?syntax error before: maybe
     ?syntax error before: maybe
-    ?syntax error before: then
+    ?syntax error before: else
     ?SH-PROMPT:
     [invoke notok]
 
     [invoke compile ignorant.erl "+'{enable_feature, ifn_expr}' +'{enable_feature, maybe_expr}'"]
     ?syntax error before:
     ?syntax error before: maybe
-    ?syntax error before: then
+    ?syntax error before: else
     ?syntax error before: ifn
     ?SH-PROMPT:
     [invoke notok]
@@ -69,25 +69,25 @@
 
     [invoke compile f_ifn.erl "'+{enable_feature, maybe_expr}'"]
     [invoke syntax-error maybe]
-    [invoke syntax-error then]
+    [invoke syntax-error else]
     ?SH-PROMPT:
     [invoke notok]
 
     [invoke compile f_ifn.erl "--enable-feature=maybe_expr"]
     [invoke syntax-error maybe]
-    [invoke syntax-error then]
+    [invoke syntax-error else]
     ?SH-PROMPT:
     [invoke notok]
 
     [invoke compile f_ifn.erl "'+{enable_feature, maybe_expr}' '+{enable_feature, ifn_expr}'"]
     [invoke syntax-error maybe]
-    [invoke syntax-error then]
+    [invoke syntax-error else]
     ?SH-PROMPT:
     [invoke notok]
 
     [invoke compile f_ifn.erl "--enable-feature=maybe_expr --enable-feature=ifn_expr"]
     [invoke syntax-error maybe]
-    [invoke syntax-error then]
+    [invoke syntax-error else]
     ?SH-PROMPT:
     [invoke notok]
 
@@ -177,7 +177,7 @@
     [invoke erl-compile ignorant.erl [{enable_feature,ifn_expr},{enable_feature,maybe_expr}]]
     ?syntax error before:
     ?syntax error before: maybe
-    ?syntax error before: then
+    ?syntax error before: else
     ?syntax error before: ifn
     ?error
     ?$ERLPROMPT
@@ -293,7 +293,7 @@
     ?$ERLPROMPT
 
     !f_disable:no_ftrs().
-    ???[ifn,maybe,then,no_maybe]
+    ???[ifn,maybe,else,no_maybe]
     ?$ERLPROMPT
 
     !f_disable:do(5).

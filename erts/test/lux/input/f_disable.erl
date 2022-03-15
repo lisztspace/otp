@@ -44,7 +44,7 @@ no_ifn() ->
 -endif.
 
 no_ftrs() ->
-    [ifn, maybe, then, ?BAR].
+    [ifn, maybe, else, ?BAR].
 
 -compile({enable_feature, ifn_expr}).
 
