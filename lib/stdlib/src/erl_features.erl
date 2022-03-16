@@ -146,13 +146,14 @@ adjust(Col, [{W, L}| WLs], Ws) ->
     end.
 
 
--spec feature_info(atom()) -> FeatureInfoMap
+-spec feature_info(atom()) -> FeatureInfoMap | no_return()
               when
       Description :: string(),
       FeatureInfoMap ::
         #{description := Description,
           short := Description,
           type := type(),
+          keywords := [atom()],
           status := status(),
           experimental => release(),
           approved => release(),
