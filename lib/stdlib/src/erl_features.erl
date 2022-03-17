@@ -19,6 +19,8 @@
 %%
 -module(erl_features).
 
+%% FIXME divide the exported functions in public and internal for the
+%% sake of documentation.
 -export([features/0,
          feature_info/1,
          collect_features/1,
@@ -237,6 +239,7 @@ add_feature(Feature, F) ->
                 orelse F(Word)
     end.
 
+%% FIXME Rename this to reflect that it returns a function!
 remove_feature(Feature, F) ->
     Words = keywords(Feature),
     fun(Word) ->
@@ -369,6 +372,8 @@ ensure_init() ->
             init_features()
     end.
 
+%% FIXME - remove this.  It should not be available at runtime.  This
+%% is all done by the init code.
 enable_feature(Feature) ->
     ?VALID_FEATURE(Feature),
 
