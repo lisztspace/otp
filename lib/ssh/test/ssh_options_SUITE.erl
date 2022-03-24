@@ -1256,7 +1256,11 @@ id_string_own_string_server_trail_space(Config) ->
 %%--------------------------------------------------------------------
 id_string_random_server(Config) ->
     %% Check undocumented format of id_string. First a bad variant:
-    {error,{{eoptions,_}, _}} = ssh:daemon(0, [{id_string,{random,8,6}}]),
+    {error, {{eoptions, _}, _} = Err} =
+        ssh:daemon(0, [{id_string,{random,8,6}}]),
+    %% FIXME This could be more descriptive..
+    Reason = "Bad value",
+    Reason = ssh_error:description(Err),
     %% And then a correct one:
     {_Server, Host, Port} = ssh_test_lib:std_daemon(Config, [{id_string,{random,6,8}}]),
     {ok,S1}=ssh_test_lib:gen_tcp_connect(Host,Port,[{active,false},{packet,line}]),
