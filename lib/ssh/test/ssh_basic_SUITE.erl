@@ -1473,7 +1473,7 @@ setopts_getopts(Config) ->
     ok = ssh:set_sock_opts(ConnectionRef, [{delay_send,DS1}]),
     {ok,[{delay_send,DS1}]} =
         ssh:get_sock_opts(ConnectionRef, [delay_send]),
-    
+
      ssh:stop_daemon(Pid).
 
 %%--------------------------------------------------------------------
