@@ -469,7 +469,7 @@ idle_time_common(DaemonExtraOpts, ClientExtraOpts, Config) ->
     after 10000 ->
 	    {error, {closed, _} = Err} =
                 ssh_connection:session_channel(ConnectionRef, 1000),
-            true = is_list(ssh_error:description(Err))
+            "Connection closed" = ssh_error:description(Err)
     end,
     ssh:stop_daemon(Pid).
 
@@ -515,14 +515,14 @@ shell_socket(Config) when is_list(Config) ->
                                       [{active,true}]),
     {error, {not_passive_mode, _} = Err0} = ssh:shell(ActiveSock),
     ct:log("~p:~p active tcp socket failed ok", [?MODULE,?LINE]),
-    true = is_list(ssh_error:description(Err0)),
+    "Socket not in passive mode." = ssh_error:description(Err0),
     gen_tcp:close(ActiveSock),
 
     %% Secondly, test with an UDP socket:
     {ok,BadSock} = gen_udp:open(0),
     {error, {not_tcp_socket, _} = Err1} = ssh:shell(BadSock),
     ct:log("~p:~p udp socket failed ok", [?MODULE,?LINE]),
-    true = is_list(ssh_error:description(Err1)),
+    "Not a TCP socket." = ssh_error:description(Err1),
     gen_udp:close(BadSock),
 
     %% And finally test with passive mode (which should work):
@@ -862,15 +862,16 @@ ssh_file_is_host_key_misc(Config) ->
 
     true = ssh_file:is_host_key(Key2, "h21",   22, 'ssh-ed448',   [{user_dir,Dir},
                                                                    {key_cb_private,[{optimize,space}]}]),
+    RevokedStr = "Key is revoked.",
     %% Check revoked key:
     {error, {revoked_key, _} = Err0} =
         ssh_file:is_host_key(Key2, "h22",   22, 'ssh-ed448', [{user_dir,Dir}]),
-    true = is_list(ssh_error:description(Err0)),
+    RevokedStr = ssh_error:description(Err0),
     {error, {revoked_key, _} = Err1} =
         ssh_file:is_host_key(Key2, "h22",   22, 'ssh-ed448',
                              [{user_dir,Dir},
                               {key_cb_private,[{optimize,space}]}]),
-    true = is_list(ssh_error:description(Err1)),
+    RevokedStr = ssh_error:description(Err1),
     %% Check key with "!" in pattern:
     false= ssh_file:is_host_key(Key1, "h12",   22, 'ssh-ed25519', [{user_dir,Dir}]),
 
@@ -1464,7 +1465,9 @@ setopts_getopts(Config) ->
     %% Test to set forbidden opts
     {error, {{not_allowed,[active,deliver,mode,packet]}, _} = Err} =
         ssh:set_sock_opts(ConnectionRef, [{active,once},{deliver,term},{mode,binary},{packet,0}]),
-    true = is_list(ssh_error:description(Err)),
+    %% FIXME This might be too specific and become brittle
+    ErrStr = "Options '[active,deliver,mode,packet]' not allowed.",
+    ErrStr = ssh_error:description(Err),
 
     %% Test to set some other opt
     {ok,[{delay_send,DS0}]} =
