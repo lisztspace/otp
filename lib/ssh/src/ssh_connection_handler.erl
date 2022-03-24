@@ -2284,7 +2284,7 @@ description(connection_closed) ->
     "Connection closed";
 description({not_allowed, Bad}) ->
     %% FIXME Find a better message here.
-    ?FMT("Options '~p' not allwed.", [Bad]);
+    ?FMT("Options '~p' not allowed.", [Bad]);
 description(closed) ->
     "Connection closed";
 description(timeout) ->
