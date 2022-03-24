@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2008-2021. All Rights Reserved.
+%% Copyright Ericsson AB 2008-2022. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -364,7 +364,10 @@ try_exec_simple_group(Group, Config) ->
     catch
         %% FIXME use name instead of explicit constant?
         %% "Key exchange failed"
-        error:{badmatch, {error, {{rfc_code, 3}, _}}} -> ok
+        error:{badmatch, {error, {{rfc_code, 3}, _} = Err}} ->
+            Reason = "Key exchange failed",
+            Reason = ssh_error:description(Err),
+            ok
     end.
 
 %%--------------------------------------------------------------------
