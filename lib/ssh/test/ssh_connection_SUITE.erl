@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2008-2021. All Rights Reserved.
+%% Copyright Ericsson AB 2008-2022. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -273,33 +273,41 @@ simple_exec_two_socks(_Config) ->
 connect2_invalid_options(_Config) ->
     {error, {{invalid_options, _}, _} = Err} =
         ssh:connect(bogus_socket, {bad, option}),
-    true = is_list(ssh_error:description(Err)).
+    Reason =
+        "Options argument should be a list, found '{bad,option}'.",
+    Reason = ssh_error:description(Err).
 
 connect3_invalid_port(_Config) ->
     {error, {invalid_port, _} = Err} =
         ssh:connect(bogus_host, noport, [{key, value}]),
-    true = is_list(ssh_error:description(Err)).
+    Reason = "Invalid port given.",
+    Reason = ssh_error:description(Err).
 
 connect3_invalid_options(_Config) ->
     {error, {{invalid_options, _}, _} = Err} =
         ssh:connect(bogus_host, 1337, bad_options),
-    true = is_list(ssh_error:description(Err)).
+    Reason = "Options argument should be a list, found 'bad_options'.",
+    Reason = ssh_error:description(Err).
 
 connect3_invalid_timeout_0(_Config) ->
     {error, {invalid_timeout, _} = Err} =
         ssh:connect(bogus_socket, [{key, value}], short),
-    true = is_list(ssh_error:description(Err)).
+    Reason = "Invalid value for timeout given.",
+    Reason = ssh_error:description(Err).
 
 connect3_invalid_timeout_1(_Config) ->
     {error, {invalid_timeout, _} = Err} =
         ssh:connect(bogus_socket, [{key, value}], -1),
-    true = is_list(ssh_error:description(Err)).
+    Reason = "Invalid value for timeout given.",
+    Reason = ssh_error:description(Err).
 
 connect3_invalid_both(_Config) ->
-    %% The actual reason is implementation dependent.
+    %% FIXME The actual reason is implementation dependent, so we
+    %% should really accept one of two different reasons.
     {error, {_Reason, _} = Err} =
         ssh:connect(bogus, no_list_or_port, no_list_or_timeout),
-    true = is_list(ssh_error:description(Err)).
+    Reason = "Invalid port given.",
+    Reason = ssh_error:description(Err).
 
 connect_invalid_port(Config) ->
     {Pid, Host, _Port, UserDir} = daemon_start(Config),
@@ -312,7 +320,8 @@ connect_invalid_port(Config) ->
                      {user_interaction, false},
                      {user_dir, UserDir}],
                     infinity),
-    true = is_list(ssh_error:description(Err)),
+    Reason = "Invalid port given.",
+    Reason = ssh_error:description(Err),
 
     ssh:stop_daemon(Pid).
 
@@ -327,7 +336,8 @@ connect_invalid_timeout_0(Config) ->
                      {user_interaction, false},
                      {user_dir, UserDir}],
                    longer),
-    true = is_list(ssh_error:description(Err)),
+    Reason = "Invalid value for timeout given.",
+    Reason = ssh_error:description(Err),
 
     ssh:stop_daemon(Pid).
 
@@ -342,7 +352,8 @@ connect_invalid_timeout_1(Config) ->
                      {user_interaction, false},
                      {user_dir, UserDir}],
                    -1),
-    true = is_list(ssh_error:description(Err)),
+    Reason = "Invalid value for timeout given.",
+    Reason = ssh_error:description(Err),
 
     ssh:stop_daemon(Pid).
 
@@ -353,20 +364,23 @@ connect_invalid_options(Config) ->
         ssh:connect(Host, Port,
                     {user, "foo"},
                     infinity),
-    true = is_list(ssh_error:description(Err)),
+    Reason = "Options argument should be a list, found '{user,\"foo\"}'.",
+    Reason = ssh_error:description(Err),
 
     ssh:stop_daemon(Pid).
 
-%% Two out three arguments incorrect.  Three possibilities.
+%% Two out of three arguments incorrect.  Three possibilities.
 connect4_invalid_two_0(Config) ->
     {Pid, Host, _Port, _UserDir} = daemon_start(Config),
 
-    %% Actual error implementation dependent
+    %% FIXME Actual error implementation dependent - allow and test
+    %% for both
     {error, Err} =
         ssh:connect(Host, noport,
                     {user, "foo"},
                     infinity),
-    true = is_list(ssh_error:description(Err)),
+    Reason = "Invalid port given.",
+    Reason = ssh_error:description(Err),
 
     ssh:stop_daemon(Pid).
 
@@ -378,19 +392,20 @@ connect4_invalid_two_1(Config) ->
         ssh:connect(Host, Port,
                     {user, "foo"},
                     short),
-    true = is_list(ssh_error:description(Err)),
+    Reason = "Options argument should be a list, found '{user,\"foo\"}'.",
+    Reason = ssh_error:description(Err),
 
     ssh:stop_daemon(Pid).
 
 connect4_invalid_two_2(Config) ->
     {Pid, Host, Port, _UserDir} = daemon_start(Config),
 
-    %% Actual error implementation dependent
+    %% FIXME Actual error implementation dependent - all both
     {error, Err} =
         ssh:connect(Host, newport,
                     [{user, "foo"}],
                     -1),
-    true = is_list(ssh_error:description(Err)),
+    "Invalid port given." = ssh_error:description(Err),
 
     ssh:stop_daemon(Pid).
 
@@ -398,12 +413,13 @@ connect4_invalid_two_2(Config) ->
 connect4_invalid_three(Config) ->
     {Pid, Host, Port, _UserDir} = daemon_start(Config),
 
-    %% Actual error implementation dependent
+    %% FIXME Actual error implementation dependent - allow all three
+    %% possible errors and reasons
     {error, {_, _} = Err} =
         ssh:connect(Host, teleport,
                     {user, "foo"},
                     fortnight),
-    true = is_list(ssh_error:description(Err)),
+    "Invalid port given." = ssh_error:description(Err),
 
     ssh:stop_daemon(Pid).
 
@@ -426,7 +442,7 @@ connect_sock_not_tcp(_Config) ->
         ssh:connect(Sock, [{save_accepted_host, false},
                            {silently_accept_hosts, true},
                            {user_interaction, true}]),
-    true = is_list(ssh_error:description(Err)),
+    "Not a TCP socket." = ssh_error:description(Err),
     gen_udp:close(Sock).
 
 %%--------------------------------------------------------------------
@@ -437,14 +453,14 @@ connect_timeout(_Config) ->
         ssh:connect(loopback, Port, [{connect_timeout,2000},
                                      {save_accepted_host, false},
                                      {silently_accept_hosts, true}]),
-    true = is_list(ssh_error:description(Err)),
+    "Timeout" = ssh_error:description(Err),
     gen_tcp:close(Sl).
 
 %%--------------------------------------------------------------------
 daemon_sock_not_tcp(_Config) ->
     {ok,Sock} = gen_udp:open(0, []),
     {error, {not_tcp_socket, _} = Err} = ssh:daemon(Sock),
-    true = is_list(ssh_error:description(Err)),
+    "Not a TCP socket." = ssh_error:description(Err),
     gen_udp:close(Sock).
 
 %%--------------------------------------------------------------------
@@ -454,14 +470,14 @@ connect_sock_not_passive(_Config) ->
         ssh:connect(Sock, [{save_accepted_host, false},
                            {silently_accept_hosts, true},
                            {user_interaction, true}]),
-    true = is_list(ssh_error:description(Err)),
+    "Socket not in passive mode." = ssh_error:description(Err),
     gen_tcp:close(Sock).
 
 %%--------------------------------------------------------------------
 daemon_sock_not_passive(_Config) ->
     {ok,Sock} = ssh_test_lib:gen_tcp_connect(?SSH_DEFAULT_PORT, []),
     {error, {not_passive_mode, _} = Err} = ssh:daemon(Sock),
-    true = is_list(ssh_error:description(Err)),
+    "Socket not in passive mode." = ssh_error:description(Err),
     gen_tcp:close(Sock).
 
 %%--------------------------------------------------------------------
@@ -581,7 +597,7 @@ send_after_exit(Config) when is_list(Config) ->
     end,
     case ssh_connection:send(ConnectionRef, ChannelId0, Data, 2000) of
 	{error, {closed, _} = Err} ->
-            true = is_list(ssh_error:description(Err)),
+            "Connection closed" = ssh_error:description(Err),
             ok;
 	ok ->
 	    ct:fail({expected, {error, {closed, "<meta data>"}}, {got, ok}});
@@ -742,7 +758,7 @@ do_interrupted_send(Config, SendSize, EchoSize) ->
 		    ct:log("~p:~p Check sender", [?MODULE,?LINE]),
 		    receive
 			{SenderPid, {error, {closed, _} = Err}} ->
-                            true = is_list(ssh_error:description(Err)),
+                            "Connection closed" = ssh_error:description(Err),
 			    ct:log("~p:~p ~p - That's what we expect :)",
                                    [Err, ?MODULE, ?LINE]),
 			    ok;
@@ -753,7 +769,8 @@ do_interrupted_send(Config, SendSize, EchoSize) ->
 		    end;
 
 		{SenderPid, {error, {closed, _} = Err}} ->
-                    true = is_list(ssh_error:description(Err)),
+                    Reason = "Connection closed",
+                    Reason = ssh_error:description(Err),
 		    ct:log("~p:~p ~p - That's what we expect, but client channel handler has not reported yet",
                            [Err, ?MODULE, ?LINE]),
 		    receive
@@ -1440,6 +1457,7 @@ kex_error(Config) ->
             end;
 
         error:{badmatch, {error, _} = Err1} ->
+            %% Just check that the error has a description
             true = is_list(ssh_error:description(Err1)),
             ok = logger:remove_handler(kex_error),
             ct:fail("unexpected error msg", [])
@@ -1476,7 +1494,8 @@ stop_listener(Config) when is_list(Config) ->
                                  {password, "morot"},
                                  {user_interaction, true},
                                  {user_dir, UserDir}]),
-    true = is_list(ssh_error:description(Err0)),
+    Reason = "Connection refused.",
+    Reason = ssh_error:description(Err0),
     success = ssh_connection:exec(ConnectionRef0, ChannelId0,
 				  "testing", infinity),
     receive
@@ -1505,7 +1524,9 @@ stop_listener(Config) when is_list(Config) ->
                                          {password, "morot"},
                                          {user_interaction, true},
                                          {user_dir, UserDir}]),
-            true = is_list(ssh_error:description(Err1)),
+            Reason1 = "Unable to connect using the available "
+                "authentication methods",
+            Reason1 = ssh_error:description(Err1),
 	    ssh:close(ConnectionRef0),
 	    ssh:close(ConnectionRef1),
 	    ssh:stop_daemon(Pid0),
