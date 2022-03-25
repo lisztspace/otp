@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2008-2021. All Rights Reserved.
+%% Copyright Ericsson AB 2008-2022. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -824,14 +824,16 @@ ext_info_c(Config) ->
 preferred_algorithms(Config) ->
     Ciphers = filter_supported(cipher, ?CIPHERS),
     {error,{{eoptions,{{preferred_algorithms,{kex,[some_unknown_algo]}},
-                       unsupported_values}}, _}} =
+                       unsupported_values}}, _} = Err} =
         chk_pref_algs(Config,
                       [?DEFAULT_KEX],
                       Ciphers,
                       [{preferred_algorithms, [{kex,[some_unknown_algo,?DEFAULT_KEX]},
                                                {cipher,Ciphers}
                                               ]}
-                      ]).
+                      ]),
+    Reason = "Unsupported algorithms: '{kex,[some_unknown_algo]}'",
+    Reason = ssh_error:description(Err).
 
 %%%----------------------------------------------------------------
 %%%
