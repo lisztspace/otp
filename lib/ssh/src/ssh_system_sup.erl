@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2008-2021. All Rights Reserved.
+%% Copyright Ericsson AB 2008-2022. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -112,7 +112,10 @@ start_subsystem(Role, Address=#address{}, Socket, Options0) ->
                     try
                         receive
                             {new_connection_ref, Id, ConnPid} ->
-                                ssh_connection_handler:takeover(ConnPid, Role, Socket, Options)
+                                ssh_connection_handler:takeover(ConnPid,
+                                                                Role,
+                                                                Socket,
+                                                                Options)
                         after 10000 ->
 
                                 error(timeout)
