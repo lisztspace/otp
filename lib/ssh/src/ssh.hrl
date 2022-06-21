@@ -556,7 +556,9 @@
        ).
 
 %% Error handling
--record(error_meta, {module = ?MODULE :: module(), line = ?LINE :: pos_integer()}).
+-record(error_meta,
+        {module = ?MODULE :: module(),
+         line = ?LINE :: pos_integer()}).
 
 -define(META(Module), #error_meta{module = Module}).
 
