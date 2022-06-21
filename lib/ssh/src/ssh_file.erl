@@ -82,7 +82,7 @@
 %%%---------------- SERVER API ------------------------------------
 -spec host_key(Algorithm, Options) -> Result when
       Algorithm :: ssh:pubkey_alg(),
-      Result :: {ok, public_key:private_key()} | {error, term()},
+      Result :: {ok, public_key:private_key()} | {error, ssh:error()},
       Options :: ssh_server_key_api:daemon_key_cb_options(none()).
 
 host_key(Algorithm, Opts) ->
@@ -158,7 +158,7 @@ add_host_key(Hosts0, Port, Key, Opts) ->
 	    file:close(Fd),
 	    Res;
 	{error,Error} ->
-	    {error,{add_host_key,Error}}
+	    {error, ?ssh_error({add_host_key,Error})}
     end.
 
 %%%---------------- UTILITY API -----------------------------------
@@ -240,7 +240,7 @@ decode(KeyBin0, openssh_key) when is_binary(KeyBin0) ->
          end || Line <- split_in_nonempty_lines(KeyBin0)
         ]
     catch
-        _:_ -> {error, key_decode_failed}
+        _:_ -> {error, ?ssh_error(key_decode_failed)}
     end;
 
 decode(Bin, known_hosts) when is_binary(Bin) ->
@@ -302,6 +302,7 @@ decode(_KeyBin, _Type) ->
     error(badarg).
 
 %%%----------------------------------------------------------------
+%% FIXME should this be an ssh:error() instead of the term?
 -spec encode(InData, Type) -> binary() | {error,term()}
                                   when Type :: ssh2_pubkey
                                              | openssh_key
@@ -453,7 +454,7 @@ lookup_auth_keys(KeyType, Key, File, Opts) ->
                    false
             end;
         Other ->
-            {error,{is_auth_key,{opt,Other}}}
+            {error, ?ssh_error({is_auth_key,{opt,Other}})}
     end.
 
 
@@ -543,6 +544,7 @@ read_test_loop(Fd, Test) ->
             file:close(Fd),
 	    false;
 	{error,Error} ->
+            %% FIXME - wrap this?
 	    %% Rare... For example NFS errors
 	    {error,Error};
 	Line0 ->
@@ -579,9 +581,10 @@ lookup_host_keys(Hosts, KeyType, Key, File, Opts) ->
                             false
                     end;
                 {error,enoent} ->
+                    %% FIXME - why return false?
                     false;
                 {error,Error} ->
-                    {error,{is_host_key,Error}}
+                    {error, ?ssh_error({is_host_key,Error})}
             end;
         space ->
             case file:open(File, [read, binary]) of
@@ -606,17 +609,18 @@ lookup_host_keys(Hosts, KeyType, Key, File, Opts) ->
                                         true
                                 end;
                             {error,Error} ->
-                                {error,{is_host_key,Error}};
+                                {error, ?ssh_error({is_host_key,Error})};
                             Other ->
                                 Other
                         end,
                     file:close(Fd),
                     Result;
                 {error,Error} ->
+                    %% FIXME no wrap due to being a low level error?
                     {error,Error}
             end;
         Other ->
-            {error,{is_host_key,{opt,Other}}}
+            {error, ?ssh_error({is_host_key,{opt,Other}})}
     end.
 
 
@@ -792,6 +796,7 @@ assure_file_mode(File, Mode) ->
             %% Not yet created
             ok;
         {error,Error} ->
+            %% FIXME don't wrap due to low level error?
             {error,Error}
     end.
 
@@ -821,12 +826,14 @@ read_ssh_key_file(Role, PrivPub, Algorithm, Opts) ->
                 {ok, [{Key,_Attrs}|_Keys]} ->
                     {ok,Key};
                 {error, Reason} ->
+                    %% FIXME does decode_ssh_file/4 wrap errors?
                     {error, Reason}
             catch
+                %% FIXME check when/why/what decode_ssh_file/4 throws
                 throw:Reason ->
-                    {error, Reason};
+                    {error, ?ssh_error(Reason)};
                 error:Reason ->
-                    {error, Reason}
+                    {error, ?ssh_error(Reason)}
             end;
 
         {error, Reason} ->
@@ -839,7 +846,7 @@ read_ssh_key_file(Role, PrivPub, Algorithm, Opts) ->
       Algorithm :: ssh:pubkey_alg() | any,
       Pem :: binary(),
       Password :: string() | ignore,
-      Result :: {ok, Keys} | {error, any()},
+      Result :: {ok, Keys} | {error, ssh:error()},
       Keys :: [{Key,Attrs}],
       Attrs :: [{any(),any()}],
       Key :: public_key:private_key() | public_key:public_key() .
@@ -854,17 +861,18 @@ decode_ssh_file(PrivPub, Algorithm, Pem, Password) ->
             case [{Key,Attrs} || {Key,Attrs} <- Keys0,
                                  ssh_transport:valid_key_sha_alg(PrivPub, Key, Algorithm)] of
                 [] ->
-                    {error,no_key_found};
+                    {error, ?ssh_error(no_key_found)};
                 Keys ->
                     {ok,Keys}
             end;
 
         {error,Error} ->
+            %% FIXME does decode_pem_keys/2 wrap errors?
             {error,Error}
 
     catch
         _:_ ->
-            {error, key_decode_failed}
+            {error, ?ssh_error(key_decode_failed)}
     end.
 
 
@@ -911,9 +919,10 @@ decode_pem_keys(PemLines, Password, Acc) ->
                     decode_pem_keys(RestLines, Password, [{Key,Attrs}|Acc]);
 
                 _X ->
-                    {error, no_pass_phrase}
+                    {error, ?ssh_error(no_pass_phrase)}
             end
     catch
+        %% FIXME why, suddenly, an exception?  Control flow?
         _:_ -> error(bad_or_unsupported_key_format)
     end.
 

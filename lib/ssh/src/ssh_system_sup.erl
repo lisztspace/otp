@@ -122,7 +122,7 @@ start_subsystem(Role, Address=#address{}, Socket, Options0) ->
                         end
                     catch
                         error:{badmatch,{error,Error}} ->
-                            {error,Error};
+                            {error, ?ssh_error(Error)};
                         error:timeout ->
                             %% The connection was started, but the takover procedure timed out,
                             %% therefore it exists a subtree, but it is not quite ready and

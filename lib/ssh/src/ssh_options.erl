@@ -68,6 +68,8 @@
                             }.
 
 -define(error(Details), ?ssh_error({eoptions, Details})).
+-define(error(Details, Module, Line),
+        ?ssh_error({eoptions, Details}, Module, Line)).
 
 %%%================================================================
 %%%
@@ -84,6 +86,7 @@ get_value(Class, Key, Opts, _CallerMod, _CallerLine) when is_map(Opts) ->
         user_options     -> maps:get(Key, Opts)
     end;
 get_value(Class, Key, Opts, _CallerMod, _CallerLine) ->
+    %% FIXME construct new error here?
     error({bad_options,Class, Key, Opts, _CallerMod, _CallerLine}).
 
 
@@ -101,6 +104,7 @@ get_value(Class, Key, Opts, DefFun, CallerMod, CallerLine) when is_map(Opts) ->
         error:{badkey,Key} -> DefFun()
     end;
 get_value(Class, Key, Opts, _DefFun, _CallerMod, _CallerLine) ->
+    %% FIXME construct new error here?
     error({bad_options,Class, Key, Opts, _CallerMod, _CallerLine}).
 
 
@@ -231,16 +235,16 @@ handle_options(Role, OptsList0, Opts0) when is_map(Opts0),
                               save(KV, OptionDefinitions, Vals)
                       end, InitialMap, OptsList2))
     catch
-        error:{eoptions, KV, Reason} ->
+        error:?error({KV, Reason}, _, _) = Error ->
             if
                 %% FIXME Is this clause really needed?
                 Reason == undefined ->
                     {error, ?error(KV)};
                 %% FIXME this clause should not be needed.
-                is_list(Reason) ->
-                    {error, ?error({KV, lists:flatten(Reason)})};
+                %% is_list(Reason) ->
+                %%     {error, ?error({KV, lists:flatten(Reason)})};
                 true ->
-                    {error, ?error({KV, Reason})}
+                    {error, Error}
             end
     end.
 
@@ -313,9 +317,9 @@ save({Key,Value}, Defs, OptMap) when is_map(OptMap) ->
         {true, ModifiedValue} ->
             OptMap#{Key := ModifiedValue};
         false ->
-            error({eoptions, {Key,Value}, bad_value});
+            error(?error({{Key,Value}, bad_value}));
         forbidden ->
-            error({eoptions, {Key,Value}, forbidden})
+            error(?error({{Key,Value}, forbidden}))
     catch
         %% An unknown Key (= not in the definition map) is
         %% regarded as an inet option:
@@ -328,7 +332,7 @@ save({Key,Value}, Defs, OptMap) when is_map(OptMap) ->
         %% But a Key that is known but the value does not validate
         %% by the check fun will give an error exception:
         error:{check,{BadValue,Extra}} ->
-            error({eoptions, {Key,BadValue}, Extra})
+            error(?error({{Key,BadValue}, Extra}))
     end;
 save(Opt, _Defs, OptMap) when is_map(OptMap) ->
     OptMap#{socket_options := [Opt | maps:get(socket_options,OptMap)]}.
@@ -885,6 +889,7 @@ default(common) ->
 
 %%% error_in_check(BadValue) -> error_in_check(BadValue, undefined).
 
+%% FIXME this should be changed so we know where the error came from.
 error_in_check(BadValue, Extra) -> error({check,{BadValue,Extra}}).
 
 
@@ -1060,6 +1065,7 @@ initial_default_algorithms(DefList, ModList) ->
 
 %%%----------------------------------------------------------------
 check_modify_algorithms(M) when is_list(M) ->
+    %% FIXME this hides a throw
     [error_in_check(Op_KVs, bad_modify_algorithms)
      || Op_KVs <- M,
         not is_tuple(Op_KVs)
@@ -1067,6 +1073,7 @@ check_modify_algorithms(M) when is_list(M) ->
             orelse (not lists:member(element(1,Op_KVs), [append,prepend,rm]))],
     {true, [{Op,normalize_mod_algs(KVs,false)} || {Op,KVs} <- M]};
 check_modify_algorithms(Bad) ->
+    %% FIXME this hides a throw
     error_in_check(Bad, modify_algorithms_bad_option).
 
 
@@ -1228,14 +1235,13 @@ rmns(K, Vs, UnsupIsErrorFlg) ->
 rm_unsup(A, B, Flg, ErrInf) ->
     case A--B of
         Unsup=[_|_] when Flg==true ->
-            error({eoptions,
-                   {preferred_algorithms,{ErrInf,Unsup}},
-                   unsupported_values
-                  });
+            error(?error({{preferred_algorithms, {ErrInf, Unsup}},
+                          unsupported_values}));
         Unsup -> A -- Unsup
     end.
 
 
+%% FIXME Change error format
 error_if_empty([{K,[]}|_]) ->
     {error, ?error({K, empty_algoritms})};
 error_if_empty([{K,[{client2server,[]}, {server2client,[]}]}]) ->
@@ -1252,7 +1258,7 @@ error_if_empty([]) ->
 %%%----------------------------------------------------------------
 %%% Get error descriptions
 
-error_description(?error(Details)) ->
+error_description(?error(Details, _, _)) ->
     description(Details).
 
 description({_Key, empty_algoritms}) ->
@@ -1297,4 +1303,6 @@ description({{K, V}, bad_value}) ->
 description({{K, Dups}, duplicates}) ->
     ?FMT("Duplicates '~p' found for key '~p'", [Dups, K]);
 description({KVs, bad_preferred_algorithms}) ->
-    ?FMT("Bad preferred_algorithms: '~p'", [KVs]).
+    ?FMT("Bad preferred_algorithms: '~p'", [KVs]);
+description({{preferred_algorithms, Data}, unsupported_values}) ->
+    ?FMT("Unsupported algorithms: '~p'", [Data]).

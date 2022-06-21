@@ -1,7 +1,7 @@
 %
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2004-2021. All Rights Reserved.
+%% Copyright Ericsson AB 2004-2022. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -107,12 +107,12 @@
 %% Description: Starts the ssh application. Default type
 %% is temporary. see application(3)
 %%--------------------------------------------------------------------
--spec start() -> ok | {error, term()}.
+-spec start() -> ok | {error, {atom(), term()}}.
 
 start() ->
     start(temporary).
 
--spec start(Type) -> ok | {error, term()} when
+-spec start(Type) -> ok | {error, {atom(), term()}} when
       Type :: permanent | transient | temporary .
 
 start(Type) ->
@@ -130,6 +130,8 @@ start(Type) ->
 %%--------------------------------------------------------------------
 %% Description: Stops the ssh application.
 %%--------------------------------------------------------------------
+%% FIXME We might want this to return an ssh error, but if so we have
+%% to convert the error term returned by application:stop/0
 -spec stop() -> ok | {error, term()}.
 
 stop() ->
@@ -146,13 +148,15 @@ stop() ->
                  andalso Timeout >= 0))).
 
 -type connect_error() ::
-        invalid_options
+        %% FIXME Can we make this more precise?
+        {invalid_options, term()}
       | invalid_timeout
       | invalid_port.
 
 -spec connect(OpenTcpSocket, Options)
              -> {ok, connection_ref()}
-              | {error, error(connect_error()) | ssh_options:error()} when
+              | {ok, connection_ref() | undefined, term()}
+              | {'error', error(connect_error()) | ssh_options:error()} when
       OpenTcpSocket :: open_socket(),
       Options :: client_options().
 
@@ -163,6 +167,8 @@ connect(_OpenTcpSocket, Options) ->
 
 -spec connect(open_socket(), client_options(), timeout())
              -> {ok, connection_ref()}
+          %% FIXME When can this be returned?
+              | {ok, connection_ref() | undefined, term()}
               | {error, error(connect_error()) | ssh_options:error()}
            ; (host(), inet:port_number(), client_options())
              -> {ok, connection_ref()}
@@ -182,9 +188,10 @@ connect(Socket, UserOptions, NegotiationTimeout)
 	Options = #{} ->
             case valid_socket_to_use(Socket, ?GET_OPT(transport,Options)) of
                 ok ->
-                    continue_connect(Socket, Options, NegotiationTimeout);
-                {error,SockError} ->
-                    {error,SockError}
+                    continue_connect(Socket, Options,
+                                     NegotiationTimeout);
+                {error, SockError} ->
+                    {error, SockError}
             end
     end;
 connect(_HostOrSocket, PortOrOptions, OptionsOrTimeout) ->
@@ -192,6 +199,8 @@ connect(_HostOrSocket, PortOrOptions, OptionsOrTimeout) ->
 
 -spec connect(Host, Port, Options, NegotiationTimeout)
              -> {ok, connection_ref()}
+          %% FIXME When can this be returned?
+              | {ok, connection_ref() | undefined, term()}
               | {error, error(connect_error()) | ssh_options:error()} when
       Host :: host(),
       Port :: inet:port_number(),
@@ -213,14 +222,25 @@ connect(Host0, Port, UserOptions, NegotiationTimeout)
                 transport_connect(Host, Port, SocketOpts, Options)
             of
                 {ok, Socket} ->
-                    continue_connect(Socket, Options, NegotiationTimeout);
+                    case continue_connect(Socket, Options, NegotiationTimeout)
+                        of
+                        {error, timeout} ->
+                            {error, ?ssh_error(timeout)};
+                        {error, Reason} when is_list(Reason) ->
+                            {error, ?ssh_error(Reason)};
+                        Other -> Other
+                    end;
+                {error, econnrefused} ->
+                    %% FIXME kludgy wrapper
+                    {error, ?ssh_error(econnrefused)};
                 {error, Reason} ->
                     {error, Reason}
             catch
-                _:badarg -> {error, {options,?GET_OPT(socket_options,Options)}};
-                _:{error,Reason} -> {error,Reason};
-                error:Error -> {error,Error};
-                Class:Error -> {error, {Class,Error}}
+                _:badarg -> {error,
+                             {options, ?GET_OPT(socket_options, Options)}};
+                _:{error, Reason} -> {error, Reason};
+                error:Error -> {error, Error};
+                Class:Error -> {error, {Class, Error}}
             end
     end;
 connect(_Host, Port, UserOptions, NegotiationTimeout) ->
@@ -251,7 +271,8 @@ bad_args(Args) ->
                (false, Error) -> {true, {error, ?ssh_error(Error)}}
             end,
     Check =
-        fun({options, Arg}) -> IsErr(?IS_VALID_OPTIONS(Arg), invalid_options);
+        fun({options, Arg}) -> IsErr(?IS_VALID_OPTIONS(Arg),
+                                     {invalid_options, Arg});
            ({timeout, Arg}) -> IsErr(?IS_VALID_TIMEOUT(Arg), invalid_timeout);
            ({port, Arg})    -> IsErr(?IS_VALID_PORT(Arg), invalid_port)
         end,
@@ -269,7 +290,7 @@ continue_connect(Socket, Options0, NegTimeout) ->
     ssh_system_sup:start_subsystem(client, Address, Socket, Options).
 
 %%--------------------------------------------------------------------
--spec close(ConnectionRef) -> ok | {error,term()} when
+-spec close(ConnectionRef) -> ok when
       ConnectionRef :: connection_ref() .
 %%
 %% Description: Closes an ssh connection.
@@ -686,18 +707,19 @@ chk_algos_opts(Opts) ->
 
 %%--------------------------------------------------------------------
 -spec set_sock_opts(ConnectionRef, SocketOptions) ->
-                           ok | {error, inet:posix()}  when
+          ok | {error, inet:posix() | error(badarg | {not_allowed, term()})}  when
       ConnectionRef :: connection_ref(),
-      SocketOptions :: [gen_tcp:option()] .
+      SocketOptions :: [gen_tcp:option_name()] .
 %%--------------------------------------------------------------------
 set_sock_opts(ConnectionRef, SocketOptions) ->
     ssh_connection_handler:set_sock_opts(ConnectionRef, SocketOptions).
 
 %%--------------------------------------------------------------------
 -spec get_sock_opts(ConnectionRef, SocketGetOptions) ->
-                           ok | {error, inet:posix()}  when
+          {ok, [inet:socket_setopt() | gen_tcp:pktoptions_value()]}
+              | {error, error(badarg | inet:posix())}  when
       ConnectionRef :: connection_ref(),
-      SocketGetOptions :: [gen_tcp:option_name()] .
+      SocketGetOptions :: [inet:socket_getopt()] .
 %%--------------------------------------------------------------------
 get_sock_opts(ConnectionRef, SocketGetOptions) ->
     ssh_connection_handler:get_sock_opts(ConnectionRef, SocketGetOptions).
@@ -886,8 +908,8 @@ valid_socket_to_use(Socket, {tcp,_,_}) ->
         }
     of
         {true,  true} -> ok;
-        {true, false} -> {error, not_passive_mode};
-        _ ->             {error, not_tcp_socket}
+        {true, false} -> {error, ?ssh_error(not_passive_mode)};
+        _ ->             {error, ?ssh_error(not_tcp_socket)}
     catch
         _:_ ->           {error, bad_socket}
     end;
@@ -1048,5 +1070,19 @@ ssh_dbg_format(tcp, {return_from, {?MODULE,transport_connect,4}, Result},
 error_description(?ssh_error(Details, _, _)) ->
     description(Details).
 
-description(Details) ->
-    ?FMT("~p", [Details]).
+description(not_passive_mode) ->
+    ?FMT("Socket not in passive mode.", []);
+description(not_tcp_socket) ->
+    ?FMT("Not a TCP socket.", []);
+description({invalid_options, Arg}) ->
+    ?FMT("Options argument should be a list, found '~p'.", [Arg]);
+description(invalid_port) ->
+    %% FIXME More info needed as well as culprit
+    ?FMT("Invalid port given.", []);
+description(invalid_timeout) ->
+    %% FIXME More info needed as well as culprit
+    ?FMT("Invalid value for timeout given.", []);
+description(econnrefused) ->
+    ?FMT("Connection refused.", []);
+description(timeout) ->
+    ?FMT("Connection timed out.", []).

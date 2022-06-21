@@ -356,6 +356,10 @@ retrieve(ConnectionHandler, Key) ->
     
 %%--------------------------------------------------------------------
 %% . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+-spec set_sock_opts(connection_ref(), [gen_tcp:option_name()]) ->
+          ok | {error, ssh:error(badarg
+                                 | {not_allowed, term()}
+                                 | inet:posix())}.
 set_sock_opts(ConnectionRef, SocketOptions) ->
     try lists:foldr(fun({Name,_Val}, Acc) ->
                             case prohibited_sock_option(Name) of
@@ -382,8 +386,14 @@ prohibited_sock_option(_) -> false.
 
 %%--------------------------------------------------------------------
 %% . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+-spec get_sock_opts(connection_ref(), [inet:socket_getopt()]) ->
+          {ok, [inet:socket_setopt() | gen_tcp:pktoptions_value()]}
+              | {error, ssh:error(badarg | inet:posix())}.
 get_sock_opts(ConnectionRef, SocketGetOptions) ->
-    call(ConnectionRef, {get_sock_opts,SocketGetOptions}).
+    case call(ConnectionRef, {get_sock_opts,SocketGetOptions}) of
+        {error, Reason} -> {error, ?ssh_error(Reason)};
+        Res -> Res
+    end.
 
 %%====================================================================
 %% Test support
@@ -517,8 +527,10 @@ handshake(Pid, Ref, Timeout) ->
 	    erlang:demonitor(Ref, [flush]),
 	    {error, Reason};
 	{'DOWN', Ref, process, Pid, {shutdown, Reason}} ->
-	    {error, Reason};
+            %% FIXME should this be wrapped?
+            {error, Reason};
 	{'DOWN', Ref, process, Pid, Reason} ->
+            %% FIXME should this be wrapped?
 	    {error, Reason};
         {'EXIT',_,Reason} ->
             stop(Pid),
