@@ -983,6 +983,8 @@ start_shell_exec_direct_fun3(Config) ->
                             Config).
 
 start_shell_exec_direct_fun1_error(Config) ->
+    %% FIXME change error tuple?  Maybe not, since this is part of the
+    %% test, but we could do it for the sake of consistency.
     do_start_shell_exec_fun({direct, fun(_Cmd) -> {error, {bad}} end},
                             "testing", <<"**Error** {bad}">>, 1,
                             Config).
@@ -1106,6 +1108,7 @@ read_write_loop1(Prompt, N) ->
         {ok, quit} ->
             {ok, {N-1, inputs}};
         {ok, bad_input} ->
+            %% FIXME change error tuple?  probably not.  Why?
             {error, {bad_input,N}};
         {ok,Inp} ->
             io:format("~p~n",[simple_eval(Inp)]),
@@ -1486,6 +1489,7 @@ stop_listener(Config) when is_list(Config) ->
 
     ssh:stop_listener(Host, Port),
 
+    %% FIXME check reason here?
     {error, {_, _} = Err0} =
         ssh:connect(Host, Port, [{silently_accept_hosts, true},
                                  {save_accepted_host, false},

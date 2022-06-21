@@ -672,6 +672,9 @@ daemon_already_started(Config) when is_list(Config) ->
     {Pid, _Host, Port} = ssh_test_lib:daemon([{system_dir, SystemDir},
 					      {user_dir, UserDir},
 					      {failfun, fun ssh_test_lib:failfun/2}]),
+    %% FIXME Is it perhaps better to keep these really basic errors,
+    %% especially since they don't originate within ssh, but rather in
+    %% the underlying parts?
     {error, eaddrinuse} = ssh_test_lib:daemon(Port, [{system_dir, SystemDir},
 						     {user_dir, UserDir},
 						     {failfun,
