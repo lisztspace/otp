@@ -54,6 +54,7 @@ type_spec spec_fun typed_exprs typed_record_fields field_types field_type
 map_pair_types map_pair_type
 bin_base_type bin_unit_type
 maybe_expr maybe_match_exprs maybe_match
+cond_expr cond_clauses cond_clause
 clause_body_exprs
 ssa_check_anno
 ssa_check_anno_clause
@@ -85,6 +86,7 @@ char integer float atom sigil_prefix string sigil_suffix var
 '(' ')' ',' '->' '{' '}' '[' ']' '|' '||' '<-' '<:-' ';' ':' '#' '.' '&&'
 'after' 'begin' 'case' 'try' 'catch' 'end' 'fun' 'if' 'of' 'receive' 'when'
 'maybe' 'else'
+'cond'
 'andalso' 'orelse'
 'bnot' 'not'
 '*' '/' 'div' 'rem' 'band' 'and'
@@ -292,6 +294,7 @@ expr_max -> receive_expr : '$1'.
 expr_max -> fun_expr : '$1'.
 expr_max -> try_expr : '$1'.
 expr_max -> maybe_expr : '$1'.
+expr_max -> cond_expr : '$1'.
 
 pat_expr -> pat_expr '=' pat_expr : {match,first_anno('$1'),'$1','$3'}.
 pat_expr -> pat_expr comp_op pat_expr : ?mkop2('$1', '$2', '$3').
@@ -536,6 +539,16 @@ maybe_match_exprs -> expr : ['$1'].
 maybe_match_exprs -> expr ',' maybe_match_exprs : ['$1' | '$3'].
 
 maybe_match -> expr '?=' expr : {maybe_match,?anno('$2'),'$1','$3'}.
+
+cond_expr -> 'cond' cond_clauses 'end' : {'cond',?anno('$1'),'$2'}.
+
+cond_clauses -> cond_clause : ['$1'].
+cond_clauses -> cond_clause ';' cond_clauses : ['$1' | '$3'].
+
+cond_clause ->
+  expr '?=' expr clause_guard clause_body : {cond_clause,first_anno('$1'),['$1'],['$3'],'$4','$5'}.
+cond_clause ->
+  expr clause_guard clause_body : {cond_clause,first_anno('$1'),[], ['$1'],'$2','$3'}.
 
 argument_list -> '(' ')' : {[],?anno('$1')}.
 argument_list -> '(' exprs ')' : {'$2',?anno('$1')}.

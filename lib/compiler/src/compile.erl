@@ -1014,7 +1014,7 @@ env_default_opts() ->
     end.
 
 do_compile(Input, Opts0) ->
-    Opts = expand_opts(Opts0),
+    Opts = expand_opts([{parse_transform, cond_expr} | Opts0]),
     IntFun = internal_fun(Input, Opts),
 
     %% Some tools, like Dialyzer, has already spawned workers

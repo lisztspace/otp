@@ -91,6 +91,7 @@ MODULES =  \
 	cerl_inline \
 	cerl_trees \
 	compile \
+	cond_expr \
 	core_lib \
 	core_lint \
 	core_parse \
