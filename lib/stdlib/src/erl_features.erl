@@ -76,6 +76,14 @@ feature_specs() ->
             experimental => 25,
             approved => 27,
             keywords => ['maybe', 'else'],
+            type => extension},
+      cond_expr =>
+          #{short => "New conditional 'cond' expression (EEPXXX)",
+            description => "Implementation of cond expression proposed in EEPXXX",
+            status => experimental,
+            experimental => 28,
+            %% 'cond' is already a keyword
+            keywords => [],
             type => extension}}.
 
 %% Return all currently known features.

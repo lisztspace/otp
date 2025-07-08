@@ -1014,7 +1014,7 @@ env_default_opts() ->
     end.
 
 do_compile(Input, Opts0) ->
-    Opts = expand_opts([{parse_transform, cond_expr} | Opts0]),
+    Opts = expand_opts(Opts0),
     IntFun = internal_fun(Input, Opts),
 
     %% Some tools, like Dialyzer, has already spawned workers
@@ -1971,7 +1971,11 @@ metadata_add_features(Ftrs, #compile{options = CompOpts,
                         term_to_binary(MetaData1,
                                        ensure_deterministic(CompOpts, [])),
                         proplists:to_map(Extra))),
-    St#compile{extra_chunks = Extra1}.
+    CompOpts1 = case lists:member(cond_expr, Ftrs) of
+                  true -> [{parse_transform, cond_expr} | CompOpts];
+                  false -> CompOpts
+                end,
+    St#compile{extra_chunks = Extra1, options = CompOpts1}.
 
 ensure_deterministic(CompOpts, Opts) ->
     case member(deterministic, CompOpts) of

@@ -255,6 +255,8 @@ format_error(Error) ->
             unicode:characters_to_list(Bin)
     end.
 
+format_error_1(cond_expr_not_enabled) ->
+    ~"feature cond_expr not enabled, enable with '-feature(cond_expr, enable).' or option '-enable-feature cond_expr' to erlc";
 format_error_1(undefined_module) ->
     ~"no module definition";
 format_error_1(redefine_module) ->
@@ -2753,6 +2755,9 @@ expr({'case',Anno,E,Cs}, Vt, St0) ->
     {Evt,St1} = expr(E, Vt, St0),
     {Cvt,St2} = icrt_clauses(Cs, {'case',Anno}, vtupdate(Evt, Vt), St1),
     {vtmerge(Evt, Cvt),St2};
+expr({'cond',Anno,_Clauses}, _Vt, St) ->
+    %% cond_clauses(Clauses, {'cond',Anno}, Vt, St);
+    {[], add_error(Anno, cond_expr_not_enabled, St)};
 expr({'receive',Anno,Cs}, Vt, St) ->
     icrt_clauses(Cs, {'receive',Anno}, Vt, St);
 expr({'receive',Anno,Cs,To,ToEs}, Vt, St0) ->
